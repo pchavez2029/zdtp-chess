@@ -32,18 +32,6 @@ Clear visualization of dimensional scores, gateway patterns, and convergence ind
 
 ---
 
-## Proof of Concept
-
-**Victory Game (November 16, 2025):**
-- **16 blunders prevented** through dimensional analysis
-- **10 optimal moves identified** via gateway convergence
-- **Checkmate in 34 moves** with zero pieces hung
-- **Framework-independent confirmations** in critical positions
-
-See [TESTING_REPORT_VICTORY_2025-11-16.md](TESTING_REPORT_VICTORY_2025-11-16.md) for detailed analysis.
-
----
-
 ## Installation
 
 ### Prerequisites
@@ -54,7 +42,7 @@ See [TESTING_REPORT_VICTORY_2025-11-16.md](TESTING_REPORT_VICTORY_2025-11-16.md)
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/[your-username]/zdtp-chess.git
+git clone https://github.com/pchavez2029/zdtp-chess.git
 cd zdtp-chess
 ```
 
@@ -63,9 +51,17 @@ cd zdtp-chess
 pip install -r requirements.txt
 ```
 
-3. **Run ZDTP Chess:**
-```bash
-python zdtp_chess_server.py
+3. **Configure as MCP server:**
+Add to your MCP client configuration (e.g., Claude Desktop):
+```json
+{
+  "mcpServers": {
+    "zdtp-chess": {
+      "command": "python",
+      "args": ["-m", "zdtp_chess_mcp.zdtp_chess_server"]
+    }
+  }
+}
 ```
 
 ### Requirements
@@ -85,14 +81,18 @@ python zdtp_chess_server.py
 4. **Positive scores** = advantage for White (you)
 5. **Gateway convergence** alerts you when multiple frameworks agree
 
-### Commands
+### MCP Tools
 
-- `[move]` - Make a move in UCI notation (e.g., `e2e4`, `Ng1f3`)
-- `analyze` - Quick analysis using adaptive gateway selection
-- `analyze deep` - Full 6-gateway convergence analysis
-- `board` - Display current position
-- `help` - Show available commands
-- `quit` - Exit game
+ZDTP Chess provides the following tools through the Model Context Protocol:
+
+- **chess_new_game** - Start a new game (you play White or Black)
+- **chess_make_move** - Execute a move (requires explicit user confirmation)
+- **chess_analyze_move** - Preview move consequences without executing (what-if analysis)
+- **chess_get_board** - Display current position and game state
+- **chess_get_dimensional_analysis** - Detailed breakdown of current position
+- **chess_check_gateway_convergence** - Check multiple gateways for framework-independent optimization
+
+**Important:** Moves require explicit user permission. Use `chess_analyze_move` to explore options safely before committing with `chess_make_move`.
 
 ### Example Analysis Output
 
@@ -163,7 +163,7 @@ ZDTP Chess is built on research into Cayley-Dickson algebras and zero divisor pa
 - **Pathions (32D)** - Positional structures through six gateway patterns
 - **Chingons (64D)** - Strategic planning and endgame evaluation
 
-**Research Publication:** Framework-independent zero divisor patterns with CERN DOI.
+**Research Publication:** [Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six](https://zenodo.org/records/17574868) - Zenodo DOI: 10.5281/zenodo.17574868
 
 ### The Six Gateways
 
@@ -263,7 +263,7 @@ Chavez AI Labs applies pathological mathematics - mathematical structures tradit
 
 ZDTP Chess is currently in private beta. For collaboration inquiries, research partnerships, or commercial licensing:
 
-- Contact: [Your contact information]
+- Contact: iknowpi@gmail.com
 - Company: Chavez AI Labs (California-licensed AI company)
 - Research: See published papers on framework-independent zero divisor patterns
 
@@ -292,7 +292,7 @@ If you use ZDTP Chess in academic research, please cite:
 
 ```
 Chavez, P. (2025). ZDTP Chess: Multi-Dimensional Analysis Through Zero Divisor Patterns.
-Chavez AI Labs. https://github.com/[your-username]/zdtp-chess
+Chavez AI Labs. https://github.com/pchavez2029/zdtp-chess
 ```
 
 ---
