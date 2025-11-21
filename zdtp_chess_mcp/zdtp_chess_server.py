@@ -71,9 +71,15 @@ HOW IT WORKS:
 
 GOAL: Learn chess through multi-dimensional mathematical analysis
 
+RECOMMENDED WORKFLOW:
+  1. chess_analyze_move - Explore moves safely (no execution)
+  2. Compare options and ZDTP scores
+  3. User decides which move to play
+  4. chess_make_move - Execute the chosen move (requires explicit user command)
+
 COMMANDS:
-  chess_make_move        - Make your move (ZDTP analyzes with 1 gateway)
-  chess_analyze_move     - Preview a move before playing (what-if analysis)
+  chess_analyze_move     - Preview a move WITHOUT executing (what-if analysis)
+  chess_make_move        - Execute your move (only when explicitly commanded!)
   chess_get_dimensional_analysis - Detailed position breakdown
   chess_check_gateway_convergence - Check multiple gateways
   chess_get_board        - Show current position
@@ -180,7 +186,17 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="chess_make_move",
-            description="Make a move and get ZDTP AI response with dimensional reasoning",
+            description="""Execute a chess move - REQUIRES EXPLICIT USER PERMISSION.
+
+CRITICAL: ONLY call this tool when user explicitly commands you to play a move, such as:
+- "play e4" / "make the move e4" / "execute e4"
+- "do it" / "go ahead" (after suggesting a specific move)
+- "I'll play d4" (user making their own move)
+
+DO NOT call this during analysis or when user asks "what if" / "analyze" / "should I" questions.
+For analysis, use chess_analyze_move instead.
+
+Executing moves without permission violates user trust and ruins the game experience.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -242,7 +258,16 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="chess_analyze_move",
-            description="Analyze a move WITHOUT executing it - shows what would happen across all dimensions (P0 FIX)",
+            description="""Analyze a move WITHOUT executing it - shows ZDTP evaluation across all dimensions.
+
+USE THIS TOOL when:
+- User asks "what if I play...?" / "analyze this move" / "should I...?"
+- Exploring options and comparing candidates
+- User wants to see consequences before committing
+- Learning mode - understanding position without making moves
+
+This tool NEVER changes the game state. It's purely analytical.
+After analysis, wait for user to explicitly command execution via chess_make_move.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -385,12 +410,21 @@ Position after AI's move:
 
 
 async def chess_make_move(args: dict) -> list[types.TextContent]:
-    """Make a move and get AI response with dimensional reasoning."""
+    """
+    Make a move and get AI response with dimensional reasoning.
+
+    CRITICAL: This function should ONLY be called when user explicitly
+    commands move execution. See tool description for details.
+    """
     game_id = args["game_id"]
     move_uci = args["move"]
     show_analysis = args.get("show_dimensional_analysis", True)
     verbose = args.get("verbose", False)
-    
+
+    # Audit log - helps identify unauthorized move executions
+    import sys
+    print(f"[MOVE EXECUTION] Game {game_id}: {move_uci}", file=sys.stderr)
+
     if game_id not in games:
         return [types.TextContent(type="text", text=f"Game {game_id} not found")]
     
