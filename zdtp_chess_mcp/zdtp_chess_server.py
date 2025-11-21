@@ -395,16 +395,22 @@ async def chess_make_move(args: dict) -> list[types.TextContent]:
         return [types.TextContent(type="text", text=f"Game {game_id} not found")]
     
     board = games[game_id]
-    
+
+    # Save board state before player's move (for ZDTP showcase)
+    board_before_player = board.copy()
+
     # Parse and make player's move
     try:
         move = chess.Move.from_uci(move_uci)
         if move not in board.legal_moves:
-            return [types.TextContent(type="text", 
+            return [types.TextContent(type="text",
                 text=f"Illegal move: {move_uci}. Try again.")]
-        
+
         player_move_san = board.san(move) # Get SAN before pushing the move
         board.push(move)
+
+        # Save board state after player's move (for ZDTP showcase)
+        board_after_player = board.copy()
         
     except ValueError as e:
         return [types.TextContent(type="text", 
@@ -466,6 +472,31 @@ Position Evaluation: {ai_response.analysis.consensus_score:+.2f} (White's perspe
 
 💡 Want to check all 6 gateways? Use chess_check_gateway_convergence
 """
+
+    # Generate ZDTP Showcase (always show transmission fidelity and dimensional analysis)
+    gateway_map = {
+        'king': chess.KING,
+        'queen': chess.QUEEN,
+        'knight': chess.KNIGHT,
+        'bishop': chess.BISHOP,
+        'rook': chess.ROOK,
+        'pawn': chess.PAWN
+    }
+    gateway_piece = gateway_map.get(ai_response.gateway_used.lower(), chess.KNIGHT)
+
+    try:
+        showcase = format_zdtp_showcase(
+            move_san=player_move_san,
+            board_before=board_before_player,
+            board_after_our_move=board_after_player,
+            board_after_opponent=board,  # Current board (after AI move)
+            gateway_piece=gateway_piece,
+            opponent_move_san=ai_response.best_move_san
+        )
+        response += "\n" + showcase + "\n"
+    except Exception as e:
+        # If showcase fails, don't crash - just log and continue
+        response += f"\n(ZDTP showcase unavailable: {str(e)})\n"
 
     # Add verbose tactical details if requested
     if verbose:
