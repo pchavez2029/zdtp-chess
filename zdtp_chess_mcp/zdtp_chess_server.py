@@ -22,6 +22,8 @@ from .zdtp_engine import ZDTPEngine, get_best_move, _emergency_see_safety_check
 from .dimensional_encoder import encode_position
 from .dimensional_portal import full_cascade
 from .multidimensional_evaluator import evaluate_position
+from .opponent_response_analyzer import analyze_opponent_responses
+from .zdtp_showcase import format_zdtp_showcase
 
 
 # Game storage
@@ -47,32 +49,39 @@ def show_game_intro() -> str:
 ║      ZDTP CHESS - Applied Pathological Mathematics           ║
 ╚══════════════════════════════════════════════════════════════╝
 
-YOU: White pieces (human player)
-OPPONENT: Black pieces (computer AI)
+YOU: Human player
+OPPONENT: python-chess engine (consistent strength)
 
-YOUR ADVANTAGE: Multi-dimensional analysis tools
+WHAT ZDTP PROVIDES:
+ZDTP is an ANALYSIS TOOL that evaluates your moves using higher-
+dimensional mathematics. It does NOT control the opponent's moves.
+
   • 16D Tactical Layer - immediate threats, material balance
-  • 32D Positional Layer - piece coordination, pawn structure, center control
+  • 32D Positional Layer - piece coordination, pawn structure
   • 64D Strategic Layer - long-term planning, endgame evaluation
-  • Gateway Convergence - framework-independent optimal moves
+  • Gateway System - 6 mathematical perspectives (King/Queen/Knight/etc.)
 
 HOW IT WORKS:
-  • After each move, you'll see analysis from an adaptive gateway
-  • Positive scores = advantage for White (you)
-  • Negative scores = advantage for Black (opponent)
-  • Gateway convergence shows when multiple frameworks agree
+  • You make your move
+  • Opponent (python-chess) responds automatically
+  • ZDTP analyzes the resulting position using ONE gateway (adaptive)
+  • Positive scores = advantage for you
+  • Negative scores = advantage for opponent
+  • Want deeper analysis? Use chess_check_gateway_convergence (multiple gateways)
 
-GOAL: Use higher-dimensional mathematics to defeat traditional chess AI
+GOAL: Learn chess through multi-dimensional mathematical analysis
 
 COMMANDS:
-  chess_make_move        - Make a move (e.g., move="e2e4")
-  chess_analyze_move     - Preview a move before playing
-  chess_get_dimensional_analysis - Detailed position analysis
+  chess_make_move        - Make your move (ZDTP analyzes with 1 gateway)
+  chess_analyze_move     - Preview a move before playing (what-if analysis)
+  chess_get_dimensional_analysis - Detailed position breakdown
+  chess_check_gateway_convergence - Check multiple gateways
   chess_get_board        - Show current position
 
 OPTIONAL PARAMETERS:
   verbose=true           - Show detailed tactical information
   show_dimensional_analysis=false - Hide analysis (faster play)
+  threshold=0.3          - Convergence threshold (for convergence check)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -156,7 +165,7 @@ async def handle_list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="chess_new_game",
-            description="Start a new ZDTP chess game",
+            description="Start a new chess game with ZDTP analysis. You play against python-chess engine while ZDTP provides dimensional analysis (16D/32D/64D) for your moves using zero divisor patterns.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -165,12 +174,6 @@ async def handle_list_tools() -> list[types.Tool]:
                         "enum": ["white", "black"],
                         "description": "Your color (white or black)",
                         "default": "white"
-                    },
-                    "difficulty": {
-                        "type": "string",
-                        "enum": ["novice", "intermediate", "advanced"],
-                        "description": "ZDTP AI difficulty level",
-                        "default": "intermediate"
                     }
                 }
             }
@@ -260,6 +263,30 @@ async def handle_list_tools() -> list[types.Tool]:
                 },
                 "required": ["game_id", "move"]
             }
+        ),
+        types.Tool(
+            name="chess_check_gateway_convergence",
+            description="Check gateway convergence by evaluating position with multiple gateways",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "game_id": {
+                        "type": "string",
+                        "description": "Game ID"
+                    },
+                    "threshold": {
+                        "type": "number",
+                        "description": "Convergence threshold (default 0.3 - gateways within this range are considered agreeing)",
+                        "default": 0.3
+                    },
+                    "show_details": {
+                        "type": "boolean",
+                        "description": "Show detailed breakdown for each gateway",
+                        "default": True
+                    }
+                },
+                "required": ["game_id"]
+            }
         )
     ]
 
@@ -281,21 +308,29 @@ async def handle_call_tool(
         return await chess_get_board(arguments)
     elif name == "chess_analyze_move":
         return await chess_analyze_move(arguments)
+    elif name == "chess_check_gateway_convergence":
+        return await chess_check_gateway_convergence(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
 
 async def chess_new_game(args: dict) -> list[types.TextContent]:
-    """Start a new ZDTP chess game."""
+    """
+    Start a new ZDTP chess game.
+
+    ZDTP Chess provides advanced dimensional analysis (16D/32D/64D)
+    for YOUR moves using zero divisor transmission protocols.
+
+    Opponent: python-chess engine (consistent strength)
+    """
     global game_counter
-    
+
     player_color = args.get("player_color", "white")
-    difficulty = args.get("difficulty", "intermediate")
-    
+
     # Create new game
     game_id = f"zdtp_game_{game_counter}"
     game_counter += 1
-    
+
     board = chess.Board()
     games[game_id] = board
 
@@ -310,7 +345,13 @@ async def chess_new_game(args: dict) -> list[types.TextContent]:
 
 Game ID: {game_id}
 Your color: {player_color.upper()}
-AI difficulty: {difficulty} (using Zero Divisor Traversal Protocol)
+Opponent: python-chess engine
+
+ZDTP provides multi-dimensional analysis for YOUR moves:
+  • 16D Tactical Layer - immediate threats, material balance
+  • 32D Positional Layer - piece coordination, pawn structure
+  • 64D Strategic Layer - long-term planning, endgame evaluation
+  • Gateway System - 6 different evaluation perspectives
 
 Starting Position:
 
@@ -396,9 +437,6 @@ async def chess_make_move(args: dict) -> list[types.TextContent]:
         ai_response.analysis.positional_32d.center_control *= -1
         ai_response.analysis.strategic_64d.score *= -1
         ai_response.analysis.strategic_64d.pawn_advancement *= -1
-    
-    # Detect gateway convergence
-    convergence = detect_gateway_convergence(board)
 
     # Map gateway names to pattern explanations
     gateway_explanations = {
@@ -425,20 +463,8 @@ async def chess_make_move(args: dict) -> list[types.TextContent]:
 
 Analysis Gateway: {ai_response.gateway_used} ({gateway_explain})
 Position Evaluation: {ai_response.analysis.consensus_score:+.2f} (White's perspective)
-"""
 
-    # Add convergence indicator if detected
-    if convergence['converged']:
-        gateways_str = ', '.join(convergence['gateways'])
-        response += f"""
-🎯 GATEWAY CONVERGENCE DETECTED!
-   {len(convergence['gateways'])} gateways agree: {gateways_str}
-   Convergence Score: {convergence['average_score']:+.2f} (White's perspective)
-   Confidence: {convergence['confidence']}
-   → Framework-independent optimality confirmed
-
-   📊 Detailed analysis below uses {ai_response.gateway_used.title()} gateway
-      (selected via adaptive gateway selection)
+💡 Want to check all 6 gateways? Use chess_check_gateway_convergence
 """
 
     # Add verbose tactical details if requested
@@ -564,9 +590,6 @@ async def chess_get_dimensional_analysis(args: dict) -> list[types.TextContent]:
     }
     gateway_explain = gateway_explanations.get(chess.piece_name(gateway_piece).lower(), 'adaptive selection')
 
-    # Detect gateway convergence
-    convergence = detect_gateway_convergence(board)
-
     response = f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║  🔬 ZDTP DIMENSIONAL ANALYSIS                                ║
@@ -579,44 +602,31 @@ Gateway: {chess.piece_name(gateway_piece)} ({gateway_explain})
 Pattern ID: {cascade['portal_16_32']['gateway_pattern']['id']}
 Transmission Fidelity: {cascade['overall_fidelity']:.0%}
 Consensus Score: {analysis.consensus_score:+.2f} (White's perspective)
-"""
 
-    # Add convergence indicator if detected
-    if convergence['converged']:
-        gateways_str = ', '.join(convergence['gateways'])
-        response += f"""
-🎯 GATEWAY CONVERGENCE DETECTED!
-   {len(convergence['gateways'])} gateways agree: {gateways_str}
-   Convergence Score: {convergence['average_score']:+.2f} (White's perspective)
-   Confidence: {convergence['confidence']}
-   → Framework-independent optimality confirmed
+💡 Want to check all 6 gateways? Use chess_check_gateway_convergence
 
-   📊 Detailed analysis below uses {chess.piece_name(gateway_piece).title()} gateway
-"""
-
-    response += f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   DIMENSIONAL BREAKDOWN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎯 16D TACTICAL LAYER
+16D TACTICAL LAYER
    Score: {analysis.tactical_16d.score:+.2f}
    Material: {analysis.tactical_16d.material_balance:+.1f}
 
    {analysis.tactical_16d.reasoning}
 
-🏗️  32D POSITIONAL LAYER
+32D POSITIONAL LAYER
    Score: {analysis.positional_32d.score:+.2f}
 
    {analysis.positional_32d.reasoning}
 
-🌟 64D STRATEGIC LAYER
+64D STRATEGIC LAYER
    Score: {analysis.strategic_64d.score:+.2f}
 
    {analysis.strategic_64d.reasoning}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 OVERALL ASSESSMENT
+  OVERALL ASSESSMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {analysis.overall_assessment}
@@ -690,6 +700,10 @@ async def chess_analyze_move(args: dict) -> list[types.TextContent]:
     # Emergency SEE: Check move safety BEFORE detailed analysis (integrated into engine)
     safety_result = _emergency_see_safety_check(board, move)
 
+    # PRIORITY 1 FIX: Check opponent's response for tactical issues
+    # This fixes the Ne5 repetition loop from Moves 14-16
+    opponent_analysis = analyze_opponent_responses(board, move)
+
     # Create a copy of the board and simulate the move
     board_copy = board.copy()
     board_copy.push(move)
@@ -753,17 +767,70 @@ async def chess_analyze_move(args: dict) -> list[types.TextContent]:
     if not safety_result['is_safe'] and safety_result['warning']:
         response += f"""
 ╔═══════════════════════════════════════════════════════════╗
-║  ⚠️  BLUNDER ALERT - EMERGENCY SAFETY CHECK                ║
+║  🚨 CRITICAL BLUNDER - DO NOT PLAY THIS MOVE 🚨            ║
 ╚═══════════════════════════════════════════════════════════╝
 
 {safety_result['warning']}
 
 SEE (Static Exchange Evaluation): {safety_result['see_value']:.1f}
-This move loses significant material through recapture!
+This move loses significant material through forced recapture!
 
-🚫 RECOMMENDATION: DO NOT PLAY THIS MOVE
+🚫 STRONG RECOMMENDATION: DO NOT PLAY THIS MOVE
+
+   CRITICAL: The 16D tactical layer has detected an immediate disaster.
+   Positional and strategic gains are irrelevant if you lose major
+   material. The consensus score reflects this catastrophic blunder.
 
 """
+
+    # PRIORITY 1 FIX: Add opponent response warning if detected
+    # This prevents the Ne5 repetition loop issue
+    if not opponent_analysis.safe_after_response and opponent_analysis.tactical_warning:
+        response += f"""
+╔═══════════════════════════════════════════════════════════╗
+║  ⚠️  TACTICAL WARNING - OPPONENT RESPONSE CHECK            ║
+╚═══════════════════════════════════════════════════════════╝
+
+{opponent_analysis.tactical_warning}
+
+Immediate Safety: {'✓ Safe' if opponent_analysis.immediate_safe else '⚠️ Hangs immediately'}
+After Opponent's Best Response: ⚠️ Tactical issue detected
+
+Opponent can play:
+"""
+        for i, resp in enumerate(opponent_analysis.all_dangerous_responses[:3], 1):
+            response += f"  {i}. {resp.move_san} ({resp.threat_type})"
+            if resp.hangs_our_piece:
+                piece_name = chess.piece_name(resp.hangs_our_piece[1])
+                square_name = chess.square_name(resp.hangs_our_piece[0])
+                response += f" → hangs {piece_name} on {square_name}"
+            response += "\n"
+
+        if opponent_analysis.worst_response and opponent_analysis.worst_response.material_loss > 1.0:
+            response += f"\n⚠️ RECOMMENDATION: RISKY - Consider alternatives (loses {opponent_analysis.worst_response.material_loss:.0f} material)\n"
+        else:
+            response += f"\n⚠️ NOTE: Tactical complexity - opponent has counter-play\n"
+
+        response += "\n"
+
+    # After opponent response warning, add showcase:
+    # If opponent response has tactical warning:
+    if opponent_analysis and opponent_analysis.worst_response:
+        # Create board after opponent's worst response
+        board_after_opp = board_copy.copy()
+        board_after_opp.push(opponent_analysis.worst_response.move)
+
+        # Generate showcase
+        showcase = format_zdtp_showcase(
+            move_san=move_san,
+            board_before=board,
+            board_after_our_move=board_copy,
+            board_after_opponent=board_after_opp,
+            gateway_piece=gateway_piece,
+            opponent_move_san=opponent_analysis.worst_response.move_san
+        )
+
+        response += "\n" + showcase + "\n"
 
     response += f"""
 Position after {move_san}:
@@ -805,6 +872,102 @@ Use chess_make_move to play it, or analyze other candidates.
 """
 
     return [types.TextContent(type="text", text=response)]
+
+
+async def chess_check_gateway_convergence(args: dict) -> list[types.TextContent]:
+    """
+    Check gateway convergence by evaluating position with all 6 gateways.
+
+    This is an expensive operation (6x evaluations) - use strategically!
+    """
+    game_id = args["game_id"]
+    threshold = args.get("threshold", 0.3)
+    show_details = args.get("show_details", True)
+
+    if game_id not in games:
+        return [types.TextContent(type="text", text=f"Game {game_id} not found")]
+
+    board = games[game_id]
+
+    # Run convergence check
+    convergence = detect_gateway_convergence(board, threshold)
+
+    # Build response
+    response = f"""
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 GATEWAY CONVERGENCE CHECK                                ║
+╚══════════════════════════════════════════════════════════════╝
+
+Position:
+{board}
+
+Threshold: {threshold} (gateways within ±{threshold} are considered agreeing)
+
+"""
+
+    if show_details and 'all_scores' in convergence:
+        response += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        response += "  INDIVIDUAL GATEWAY EVALUATIONS\n"
+        response += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        scores = convergence['all_scores']
+        for gateway_name, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+            response += f"  {gateway_name:8s}: {score:+.4f}\n"
+
+        # Calculate statistics
+        score_values = list(scores.values())
+        mean = sum(score_values) / len(score_values)
+        variance = sum((s - mean)**2 for s in score_values) / len(score_values)
+        std_dev = variance ** 0.5
+        score_range = max(score_values) - min(score_values)
+
+        response += f"\n  Mean:     {mean:+.4f}\n"
+        response += f"  Std Dev:  {std_dev:.4f}\n"
+        response += f"  Range:    {score_range:.4f}\n"
+
+    response += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    response += "  CONVERGENCE ANALYSIS\n"
+    response += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+    if convergence['converged']:
+        gateways_str = ', '.join(convergence['gateways'])
+        response += f"✓ CONVERGENCE DETECTED\n\n"
+        response += f"  Agreeing Gateways: {len(convergence['gateways'])}/6\n"
+        response += f"  {gateways_str}\n\n"
+        response += f"  Convergence Score: {convergence['score']:+.2f} (White's perspective)\n"
+        response += f"  Confidence Level: {convergence['confidence']}\n\n"
+        response += f"  → Framework-independent optimality confirmed\n"
+        response += f"  → Multiple evaluation methods agree on position assessment\n"
+    else:
+        response += f"✗ NO CONVERGENCE\n\n"
+        response += f"  Agreeing Gateways: {len(convergence['gateways'])}/6 (need ≥3 for convergence)\n"
+        response += f"  Confidence Level: {convergence['confidence']}\n\n"
+        response += f"  → Gateways disagree on this position\n"
+        response += f"  → Consider trying different gateways for detailed analysis\n"
+        response += f"  → Position may have complex trade-offs\n"
+
+    response += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+    return [types.TextContent(type="text", text=response)]
+
+
+async def run_test_move_14_ne5_analysis() -> list[types.TextContent]:
+    """
+    Dedicated test function to analyze Ne5 from Move 14 position.
+    Sets up the board, calls chess_analyze_move, and returns the analysis.
+    """
+    test_game_id = "test_game_0"
+    move_14_fen = "1rb1kb1r/ppqppppp/2p2n2/n2P4/Q7/2N2N2/PP2PPPP/1R2R1K1 w - - 0 14"
+    move_to_analyze = "f3e5"
+
+    # Create or reset the test game
+    games[test_game_id] = chess.Board(move_14_fen)
+
+    # Call chess_analyze_move
+    result = await chess_analyze_move(
+        {"game_id": test_game_id, "move": move_to_analyze}
+    )
+    return result
 
 
 async def main():

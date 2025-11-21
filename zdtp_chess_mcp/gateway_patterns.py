@@ -44,8 +44,8 @@ class GatewayPatternLoader:
                           If None, uses default location in data/
         """
         if patterns_file is None:
-            # Default: look in mcp-server/data/
-            base_path = Path(__file__).parent.parent.parent
+            # Default: look in data/ at package root
+            base_path = Path(__file__).parent.parent
             patterns_file = base_path / "data" / "canonical_six_patterns.json"
 
         self.patterns_file = Path(patterns_file)

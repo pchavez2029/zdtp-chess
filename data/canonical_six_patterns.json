@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "source": "Hyperwormholes Paper - Chavez (2025)",
+    "publication_date": "2025-10-20",
+    "verified_dimensions": [16, 32, 64, 128, 256],
+    "precision": 1e-15,
+    "framework_independent": true,
+    "total_sedenion_zero_divisors": 168,
+    "canonical_six_percentage": 3.57
+  },
+  "patterns": {
+    "18": {
+      "indices": [1, 14, 3, 12],
+      "signs": [1, 1],
+      "formula": "(e1 + e14) × (e3 + e12) = 0",
+      "name": "Master Gateway",
+      "chess_piece": "King"
+    },
+    "59": {
+      "indices": [3, 12, 5, 10],
+      "signs": [1, 1],
+      "formula": "(e3 + e12) × (e5 + e10) = 0",
+      "name": "Multi-Modal Gateway",
+      "chess_piece": "Queen"
+    },
+    "84": {
+      "indices": [4, 11, 6, 9],
+      "signs": [1, 1],
+      "formula": "(e4 + e11) × (e6 + e9) = 0",
+      "name": "Discontinuous Gateway",
+      "chess_piece": "Knight"
+    },
+    "102": {
+      "indices": [1, 14, 3, 12],
+      "signs": [-1, -1],
+      "formula": "(e1 - e14) × (e3 - e12) = 0",
+      "name": "Conjugate Pair Gateway",
+      "chess_piece": "Bishop"
+    },
+    "104": {
+      "indices": [1, 14, 5, 10],
+      "signs": [-1, 1],
+      "formula": "(e1 - e14) × (e5 + e10) = 0",
+      "name": "Linear Gateway",
+      "chess_piece": "Rook"
+    },
+    "124": {
+      "indices": [2, 13, 6, 9],
+      "signs": [-1, 1],
+      "formula": "(e2 - e13) × (e6 + e9) = 0",
+      "name": "Transformation Gateway",
+      "chess_piece": "Pawn"
+    }
+  }
+}

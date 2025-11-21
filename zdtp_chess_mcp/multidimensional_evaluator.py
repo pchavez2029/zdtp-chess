@@ -2,7 +2,7 @@
 Multi-Dimensional Evaluator - ZDTP Chess Position Evaluation
 
 Evaluates chess positions at 16D (tactical), 32D (positional), and 64D (strategic)
-dimensional levels using the Zero Divisor Traversal Protocol.
+dimensional levels using the Zero Divisor Transmission Protocol.
 
 Key Insight: Different dimensional spaces emphasize different chess features.
 
@@ -372,16 +372,29 @@ class MultidimensionalEvaluator:
     ) -> float:
         """
         Build consensus score from three dimensional evaluations.
-        
+
         Weights: 16D (50%), 32D (30%), 64D (20%)
         Tactical considerations dominate in chess, but positional and
         strategic factors provide important context.
+
+        CRITICAL SAFETY OVERRIDE (2025-11-20):
+        If tactical score is catastrophically bad (< -10), consensus cannot
+        be positive. This prevents misleading "slight advantage" claims when
+        there's a critical tactical blunder (e.g., hanging queen).
         """
         consensus = (
             0.5 * tactical.score +
             0.3 * positional.score +
             0.2 * strategic.score
         )
+
+        # SAFETY OVERRIDE: If tactical disaster detected, cap consensus at tactical score
+        # This ensures consensus reflects reality when there's a critical blunder
+        if tactical.score < -10.0:
+            # Catastrophic tactical blunder (losing major piece)
+            # Consensus CANNOT be better than the tactical score
+            consensus = min(consensus, tactical.score)
+
         return consensus
     
     def _recommend_move(
@@ -577,14 +590,25 @@ class MultidimensionalEvaluator:
         return correlation
     
     def _compute_endgame_potential(self, chess_features: List[float]) -> float:
-        """Estimate endgame potential based on material simplification."""
-        # Lower material = closer to endgame
-        # coefficient 0 is material_balance
-        material_magnitude = abs(chess_features[0])
-        
-        # More simplified = higher endgame potential
-        # Inverse relationship (max material ~39, so 1 - material/39)
-        endgame_potential = max(0, 1.0 - material_magnitude / 10.0)
+        """
+        Estimate endgame potential based on material simplification.
+
+        BUG FIX (2025-11-20): This function was using material_balance (difference)
+        instead of total material. This caused "Approaching endgame" on move 1
+        because material_balance = 0 at start.
+
+        Since chess_features doesn't contain total material, we use complexity
+        (coefficient 15) as a proxy - complex positions have more pieces.
+        """
+        # Use position complexity as proxy for material count
+        # High complexity (0.7-1.0) = opening/middlegame (many pieces)
+        # Low complexity (0.0-0.3) = endgame (few pieces)
+        complexity = chess_features[15]
+
+        # Inverse: low complexity = high endgame potential
+        # complexity 0.9 → endgame_potential 0.1 (not endgame)
+        # complexity 0.3 → endgame_potential 0.7 (approaching endgame)
+        endgame_potential = max(0, 1.0 - complexity)
         return endgame_potential
     
     def _generate_strategic_reasoning(
