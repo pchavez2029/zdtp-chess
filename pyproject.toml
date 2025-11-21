@@ -1,0 +1,25 @@
+[project]
+name = "zdtp-chess-mcp"
+version = "2.1.0"
+description = "ZDTP Chess - Multi-Dimensional Chess Analysis with Zero Divisor Transmission Protocol"
+authors = [{name = "Paul Chavez", email = "paul@chavezailabs.com"}]
+requires-python = ">=3.10"
+
+dependencies = [
+    "chess>=1.10.0",
+    "mcp>=0.1.0",
+    "hypercomplex>=1.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_backend"
+
+[tool.setuptools]
+packages = ["zdtp_chess_mcp"]

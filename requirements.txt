@@ -1,0 +1,16 @@
+# ZDTP Chess Dependencies
+# Minimum requirements to run the game
+
+# Chess engine
+python-chess>=1.999
+
+# MCP Server (Model Context Protocol)
+mcp>=0.9.0
+
+# Standard library dependencies (included with Python 3.8+)
+# - asyncio
+# - typing
+# - dataclasses
+# - pathlib
+# - time
+# - sys
