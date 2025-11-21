@@ -196,6 +196,9 @@ CRITICAL: ONLY call this tool when user explicitly commands you to play a move, 
 DO NOT call this during analysis or when user asks "what if" / "analyze" / "should I" questions.
 For analysis, use chess_analyze_move instead.
 
+MANDATORY CONFIRMATION: You MUST provide the exact phrase the user said in the user_said parameter.
+This is validated to ensure moves are only executed with explicit permission.
+
 Executing moves without permission violates user trust and ruins the game experience.""",
             inputSchema={
                 "type": "object",
@@ -208,6 +211,10 @@ Executing moves without permission violates user trust and ruins the game experi
                         "type": "string",
                         "description": "Your move in UCI format (e.g., 'e2e4', 'e7e5', 'e1g1' for castling)"
                     },
+                    "user_said": {
+                        "type": "string",
+                        "description": "REQUIRED: The exact phrase the user typed to authorize this move. Examples: 'play e4', 'execute Bf5', 'do it', 'go ahead', 'e4'. This must match the user's actual command."
+                    },
                     "show_dimensional_analysis": {
                         "type": "boolean",
                         "description": "Include full 16D/32D/64D analysis in response",
@@ -219,7 +226,7 @@ Executing moves without permission violates user trust and ruins the game experi
                         "default": False
                     }
                 },
-                "required": ["game_id", "move"]
+                "required": ["game_id", "move", "user_said"]
             }
         ),
         types.Tool(
@@ -418,12 +425,78 @@ async def chess_make_move(args: dict) -> list[types.TextContent]:
     """
     game_id = args["game_id"]
     move_uci = args["move"]
+    user_said = args.get("user_said", "")
     show_analysis = args.get("show_dimensional_analysis", True)
     verbose = args.get("verbose", False)
 
+    # VALIDATION: Check that user_said parameter is provided
+    if not user_said or not user_said.strip():
+        return [types.TextContent(type="text", text="""
+╔══════════════════════════════════════════════════════════════╗
+║  ❌ MOVE EXECUTION BLOCKED - MISSING CONFIRMATION           ║
+╚══════════════════════════════════════════════════════════════╝
+
+ERROR: The 'user_said' parameter is required but was not provided.
+
+This parameter must contain the exact phrase the user typed to
+authorize this move (e.g., "play e4", "execute Bf5", "do it").
+
+REASON: This safeguard prevents accidental move execution during
+analysis. Moves should only be executed when explicitly commanded
+by the user.
+
+TO FIX:
+  1. Wait for user to explicitly command a move
+  2. Include their exact phrase in the user_said parameter
+  3. Example: chess_make_move(game_id="...", move="e2e4", user_said="play e4")
+
+For analysis without execution, use chess_analyze_move instead.
+""")]
+
+    # VALIDATION: Check that user_said contains move-execution keywords
+    user_said_lower = user_said.lower().strip()
+    valid_keywords = ['play', 'make', 'execute', 'do it', 'go ahead', 'move']
+
+    # Also accept just the move notation if it looks like a chess move
+    is_move_notation = (
+        len(user_said_lower) <= 8 and
+        any(c in user_said_lower for c in ['e', 'a', 'b', 'c', 'd', 'f', 'g', 'h'])
+    )
+
+    # Use whole-word matching to avoid false positives like "playing" matching "play"
+    import re
+    has_valid_keyword = any(
+        re.search(r'\b' + re.escape(keyword) + r'\b', user_said_lower)
+        for keyword in valid_keywords
+    )
+
+    if not has_valid_keyword and not is_move_notation:
+        return [types.TextContent(type="text", text=f"""
+╔══════════════════════════════════════════════════════════════╗
+║  ❌ MOVE EXECUTION BLOCKED - INVALID CONFIRMATION           ║
+╚══════════════════════════════════════════════════════════════╝
+
+ERROR: The user_said parameter doesn't match expected move authorization.
+
+You provided: "{user_said}"
+
+Expected phrases like:
+  • "play e4" / "execute Bf5" / "make the move"
+  • "do it" / "go ahead"
+  • "e4" / "Nf3" (move notation)
+
+REASON: This safeguard ensures moves are only executed when explicitly
+commanded by the user, not during analysis or exploration.
+
+If the user asked to analyze a move (e.g., "what if I play...?",
+"analyze d6", "should I...?"), use chess_analyze_move instead.
+
+Only use chess_make_move when the user explicitly commands execution.
+""")]
+
     # Audit log - helps identify unauthorized move executions
     import sys
-    print(f"[MOVE EXECUTION] Game {game_id}: {move_uci}", file=sys.stderr)
+    print(f"[MOVE EXECUTION] Game {game_id}: {move_uci} | User said: '{user_said}'", file=sys.stderr)
 
     if game_id not in games:
         return [types.TextContent(type="text", text=f"Game {game_id} not found")]
