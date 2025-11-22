@@ -26,16 +26,11 @@ Each position is analyzed through six mathematical **gateways** (King, Queen, Kn
 
 ## Features
 
-### Multi-Dimensional Analysis
-- **16D Tactical Layer** - Immediate threat detection, material balance, and tactical opportunities
-- **32D Positional Layer** - Piece coordination, pawn structure, and center control through zero divisor gateway patterns
-- **64D Strategic Layer** - Long-term planning, endgame evaluation, and strategic positioning
-
 ### Gateway Convergence Detection
 Six independent mathematical "gateways" (King, Queen, Knight, Bishop, Rook, Pawn) analyze each position. When multiple gateways converge on the same evaluation and recommendation, the system identifies framework-independent optimal moves with mathematical certainty.
 
 ### Blunder Prevention
-Industry-standard Static Exchange Evaluation (SEE) integrated with dimensional analysis to catch hanging pieces and material-losing moves before they happen.
+Industry-standard Static Exchange Evaluation (SEE) integrated with dimensional analysis to catch hanging pieces and catastrophic moves before they happen.
 
 ### Educational Interface
 Clear visualization of dimensional scores, gateway patterns, and convergence indicators help players understand not just *what* move to make, but *why* it's optimal across multiple mathematical frameworks.
@@ -85,15 +80,15 @@ Add to your MCP client configuration (e.g., Claude Desktop):
 
 *"I was told there would be no math."* - Anonymous Student
 
-Here's the minimal math you need to understand why this works:
+Sorry, but there's math. Here's the minimal math you need to understand how this works:
 
-### Zero Divisors: The "Impossible" Elements
+### Zero Divisors
 
 In normal arithmetic, if **A × B = 0**, then either **A = 0** or **B = 0** (or both). This is the zero-product property you learned in algebra.
 
-**But in higher-dimensional algebras, this breaks down beautifully.**
+**In higher-dimensional algebras, however, this breaks down with amazing annihilation.**
 
-In 16D sedenions, 32D pathions, and 64D chingons, you can find non-zero elements **P** and **Q** where:
+Starting in 16D sedenions and continuing upward to 32D pathions, and 64D chingons, you can find non-zero elements **P** and **Q** where:
 
 ```
 P × Q = 0
@@ -101,30 +96,21 @@ P × Q = 0
 even though P ≠ 0 and Q ≠ 0
 ```
 
-These are called **zero divisors**, and mathematicians traditionally dismissed them as "pathological"—algebraic structures that make systems "unusable."
+These are called **zero divisors**, and mathematicians traditionally have dismissed them as "pathological", wrongly demeaning them as algebraic structures that make systems "unusable."
 
 ### Why Zero Divisors Are Actually Useful
 
-**Key insight:** Zero divisors encode information about **dimensional collapse** and **information loss** in algebraic systems. In decision-making, this maps to:
+**Key insight:** Zero divisors can encode information about **dimensional collapse** and **information loss** in algebraic systems. In chess decision-making, this maps to:
 
 - **Tactical collapse** (16D) - Positions where forcing sequences eliminate options
 - **Positional transformation** (32D) - How piece coordination changes across moves
 - **Strategic encoding** (64D) - Long-term plan evaluation through dimensional reduction
 
-When you analyze a chess position in 16D and transmit it to 32D via ZDTP, zero divisor patterns preserve the **decision-relevant structure** while collapsing irrelevant noise. This is lossless information movement between dimensional spaces.
+When you analyze a chess position in 16D and transmit it to 32D and 64D via ZDTP, zero divisor patterns preserve the **decision-relevant structure** with lossless information movement between dimensional spaces.
 
 ### Example: The Canonical Six
 
-We discovered six fundamental zero divisor patterns that appear consistently across 16D/32D/64D spaces:
-
-```
-(e₁ ± e₁₀) × (e₄ ∓ e₁₅) = 0   ← King Gateway pattern
-(e₂ ± e₁₁) × (e₅ ∓ e₁₄) = 0   ← Queen Gateway pattern
-(e₃ ± e₈)  × (e₆ ∓ e₁₃) = 0   ← Knight Gateway pattern
-(e₁ ± e₁₄) × (e₄ ∓ e₁₁) = 0   ← Bishop Gateway pattern
-(e₂ ± e₁₅) × (e₅ ∓ e₁₀) = 0   ← Rook Gateway pattern
-(e₃ ± e₁₂) × (e₆ ∓ e₉) = 0    ← Pawn Gateway pattern
-```
+We discovered six fundamental zero divisor patterns that appear consistently across 16D/32D/64D spaces. (Reference: https://zenodo.org/records/17574868)
 
 Each pattern provides a different "lens" for evaluating positions. When multiple patterns converge on the same evaluation, you've found framework-independent optimality.
 
@@ -155,7 +141,7 @@ ZDTP enables **lossless data movement** between higher-dimensional mathematical 
    - If multiple gateways agree (within threshold), move is framework-independent optimal
    - Disagreement indicates tactical complexity requiring deeper analysis
 
-**Why this matters:** Traditional dimensional reduction (PCA, t-SNE, etc.) **loses information**. ZDTP uses zero divisor patterns to preserve decision-relevant structure across dimensional transformations. Information moves losslessly between 16D, 32D, and 64D spaces.
+**Why this matters:** Traditional dimensional reduction **loses information**. ZDTP uses zero divisor patterns to preserve decision-relevant structure across dimensional transformations. Information moves losslessly between 16D, 32D, and 64D spaces.
 
 ### Game Flow
 
@@ -169,7 +155,7 @@ ZDTP enables **lossless data movement** between higher-dimensional mathematical 
 
 ZDTP Chess provides the following tools through the Model Context Protocol:
 
-- **chess_new_game** - Start a new game (you play White or Black)
+- **chess_new_game** - Start a new game
 - **chess_make_move** - Execute a move (requires explicit user confirmation)
 - **chess_analyze_move** - Preview move consequences without executing (what-if analysis)
 - **chess_get_board** - Display current position and game state
@@ -243,10 +229,6 @@ The ZDTP layers run after standard blunder detection, adding strategic insight b
 
 ZDTP Chess is built on research into Cayley-Dickson algebras and zero divisor patterns:
 
-- **Sedenions (16D)** - Tactical complexity and immediate threats
-- **Pathions (32D)** - Positional structures through six gateway patterns
-- **Chingons (64D)** - Strategic planning and endgame evaluation
-
 **Research Publication:** [Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six](https://zenodo.org/records/17574868) - Zenodo DOI: 10.5281/zenodo.17574868
 
 ### The Six Gateways
@@ -267,6 +249,7 @@ When multiple gateways independently arrive at the same evaluation and recommend
 ## Applications
 
 ### Chess (Current Proof of Concept)
+- Zero Divisor Transmission Protocol moves position information with no data loss from 16D to 32D to 64D
 - Multi-dimensional position evaluation across tactical/positional/strategic layers
 - Framework-independent move quality assessment through gateway convergence
 - Real-time blunder detection with dimensional analysis
@@ -280,7 +263,6 @@ When multiple gateways independently arrive at the same evaluation and recommend
 - **AI Safety** - Catching edge cases that single-model systems miss
 
 ### For Developers & Researchers
-- **MCP Server Template** - Production-ready Model Context Protocol implementation
 - **Multi-Framework Analysis** - Reference architecture for combining independent mathematical approaches
 - **Applied Pathological Mathematics** - Demonstration that "unusable" mathematical structures have practical value
 - **Framework-Independent Optimization** - Study convergence patterns across different algebraic systems
@@ -298,13 +280,12 @@ When multiple gateways independently arrive at the same evaluation and recommend
 - ✅ MCP server with user confirmation safeguards
 
 ### Phase 2: Financial Infrastructure (In Development)
-- **CAILculator** - Quantitative finance application
+- **CAILculator** - Quantitative finance application via MCP server
 - Portfolio risk assessment across dimensional frameworks
 - Multi-asset correlation analysis through gateway patterns
 - Framework-independent optimization for trading strategies
 
 ### Phase 3: Platform Expansion
-- Medical diagnostic decision support systems
 - Strategic business planning tools
 - AI safety validation frameworks
 - Natural language processing with dimensional embeddings
@@ -327,7 +308,6 @@ Chavez AI Labs applies pathological mathematics - mathematical structures tradit
 **Founder:** Paul Chavez
 - 30+ years journalism experience (Associated Press, LA Times)
 - UCLA alumnus (Political Science, 1989)
-- Six years of research into higher-dimensional algebras
 - Published research with CERN DOI on zero divisor patterns
 
 **Products:**
@@ -339,17 +319,17 @@ Chavez AI Labs applies pathological mathematics - mathematical structures tradit
 
 ## Contributing
 
-ZDTP Chess is currently in private beta. For collaboration inquiries, research partnerships, or commercial licensing:
+For collaboration inquiries, research partnerships, or commercial licensing:
 
 - Contact: iknowpi@gmail.com
 - Company: Chavez AI Labs (California-licensed AI company)
-- Research: See published papers on framework-independent zero divisor patterns
+- Research: See published paper on framework-independent zero divisor patterns
 
 ---
 
 ## License
 
-Apache License 2.0 with patent protection. See [LICENSE.txt](LICENSE.txt) for details.
+Apache License 2.0 with patent protection.
 
 ---
 
@@ -358,7 +338,7 @@ Apache License 2.0 with patent protection. See [LICENSE.txt](LICENSE.txt) for de
 - **Python-chess library** - Foundation for chess logic and board representation
 - **Anthropic MCP** - Model Context Protocol implementation
 - **CERN** - Digital Object Identifier (DOI) for research publication
-- **Chess community** - Feedback and validation during development
+- **Chess community** - Inspiration and education during development
 
 ---
 
@@ -372,7 +352,5 @@ Chavez AI Labs. https://github.com/pchavez2029/zdtp-chess
 ```
 
 ---
-
-**Built with pathological mathematics. Tested in battle. Ready for production.**
 
 *Chavez AI Labs - Applied Pathological Mathematics*
