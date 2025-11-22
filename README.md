@@ -1,16 +1,26 @@
 # ZDTP Chess
 
-**Applied Pathological Mathematics for Strategic Decision-Making**
+**Multi-Dimensional Decision Intelligence Using Applied Pathological Mathematics**
 
 > *"Better math, less suffering"* - Chavez AI Labs
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
+[![Research](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17574868-blue)](https://zenodo.org/records/17574868)
+
 ---
 
-## Overview
+## What Makes This Different
 
-ZDTP Chess is a chess system that augments human decision-making through multi-dimensional mathematical analysis using zero divisor patterns from Cayley-Dickson algebras. Unlike traditional chess engines that provide a single evaluation score, ZDTP Chess analyzes positions across three mathematical dimensions simultaneously, offering players unprecedented insight into tactical, positional, and strategic aspects of their games.
+Traditional chess engines evaluate positions with a **single number**. ZDTP evaluates positions across **three dimensional layers simultaneously**:
 
-**Key Innovation:** Framework-independent optimal move detection through gateway convergence - when multiple mathematical frameworks independently agree on the best move, providing high-confidence recommendations backed by rigorous mathematical analysis.
+- **16D Tactical Layer** - Immediate threats, hanging pieces, forcing sequences
+- **32D Positional Layer** - Piece coordination, pawn structure, gateway patterns
+- **64D Strategic Layer** - Long-term planning, endgame evaluation, strategic depth
+
+Each position is analyzed through six mathematical **gateways** (King, Queen, Knight, Bishop, Rook, Pawn) derived from zero divisor patterns in higher-dimensional algebras. When multiple gateways converge on the same evaluation, you've found something objectively strong across independent mathematical frameworks.
+
+**This is infrastructure for AI systems, not a chess product.** Chess is the proof of concept for multi-dimensional decision intelligence.
 
 ---
 
@@ -25,7 +35,7 @@ ZDTP Chess is a chess system that augments human decision-making through multi-d
 Six independent mathematical "gateways" (King, Queen, Knight, Bishop, Rook, Pawn) analyze each position. When multiple gateways converge on the same evaluation and recommendation, the system identifies framework-independent optimal moves with mathematical certainty.
 
 ### Blunder Prevention
-Industry-standard Static Exchange Evaluation (SEE) integrated with dimensional analysis to catch hanging pieces and material-losing moves before they happen. In testing, prevented 16 potential blunders in a single game.
+Industry-standard Static Exchange Evaluation (SEE) integrated with dimensional analysis to catch hanging pieces and material-losing moves before they happen.
 
 ### Educational Interface
 Clear visualization of dimensional scores, gateway patterns, and convergence indicators help players understand not just *what* move to make, but *why* it's optimal across multiple mathematical frameworks.
@@ -71,15 +81,89 @@ Add to your MCP client configuration (e.g., Claude Desktop):
 
 ---
 
+## The Math Section
+
+*"I was told there would be no math."* - Anonymous Student
+
+Here's the minimal math you need to understand why this works:
+
+### Zero Divisors: The "Impossible" Elements
+
+In normal arithmetic, if **A × B = 0**, then either **A = 0** or **B = 0** (or both). This is the zero-product property you learned in algebra.
+
+**But in higher-dimensional algebras, this breaks down beautifully.**
+
+In 16D sedenions, 32D pathions, and 64D chingons, you can find non-zero elements **P** and **Q** where:
+
+```
+P × Q = 0
+
+even though P ≠ 0 and Q ≠ 0
+```
+
+These are called **zero divisors**, and mathematicians traditionally dismissed them as "pathological"—algebraic structures that make systems "unusable."
+
+### Why Zero Divisors Are Actually Useful
+
+**Key insight:** Zero divisors encode information about **dimensional collapse** and **information loss** in algebraic systems. In decision-making, this maps to:
+
+- **Tactical collapse** (16D) - Positions where forcing sequences eliminate options
+- **Positional transformation** (32D) - How piece coordination changes across moves
+- **Strategic encoding** (64D) - Long-term plan evaluation through dimensional reduction
+
+When you analyze a chess position in 16D and transmit it to 32D via ZDTP, zero divisor patterns preserve the **decision-relevant structure** while collapsing irrelevant noise. This is lossless information movement between dimensional spaces.
+
+### Example: The Canonical Six
+
+We discovered six fundamental zero divisor patterns that appear consistently across 16D/32D/64D spaces:
+
+```
+(e₁ ± e₁₀) × (e₄ ∓ e₁₅) = 0   ← King Gateway pattern
+(e₂ ± e₁₁) × (e₅ ∓ e₁₄) = 0   ← Queen Gateway pattern
+(e₃ ± e₈)  × (e₆ ∓ e₁₃) = 0   ← Knight Gateway pattern
+(e₁ ± e₁₄) × (e₄ ∓ e₁₁) = 0   ← Bishop Gateway pattern
+(e₂ ± e₁₅) × (e₅ ∓ e₁₀) = 0   ← Rook Gateway pattern
+(e₃ ± e₁₂) × (e₆ ∓ e₉) = 0    ← Pawn Gateway pattern
+```
+
+Each pattern provides a different "lens" for evaluating positions. When multiple patterns converge on the same evaluation, you've found framework-independent optimality.
+
+**That's the math. The rest is engineering.**
+
+---
+
 ## How It Works
+
+### Zero Divisor Transmission Protocol (ZDTP)
+
+ZDTP enables **lossless data movement** between higher-dimensional mathematical spaces:
+
+1. **Encoding (16D)** - Chess position → 16D sedenion representation
+   - Material balance, piece mobility, tactical threats
+   - Encoded using basis elements e₀ through e₁₅
+
+2. **Transmission (32D)** - 16D data → 32D pathion space via gateway patterns
+   - Six independent gateways process position simultaneously
+   - Zero divisor patterns preserve decision-relevant structure
+   - Positional factors (coordination, structure) emerge in 32D
+
+3. **Strategic Analysis (64D)** - 32D data → 64D chingon space
+   - Long-term planning, endgame evaluation
+   - Strategic depth analysis through dimensional expansion
+
+4. **Convergence Detection** - Compare all gateway outputs
+   - If multiple gateways agree (within threshold), move is framework-independent optimal
+   - Disagreement indicates tactical complexity requiring deeper analysis
+
+**Why this matters:** Traditional dimensional reduction (PCA, t-SNE, etc.) **loses information**. ZDTP uses zero divisor patterns to preserve decision-relevant structure across dimensional transformations. Information moves losslessly between 16D, 32D, and 64D spaces.
 
 ### Game Flow
 
 1. **You play White** against a computer opponent (Black)
 2. **After each move**, ZDTP analyzes the position through an adaptive gateway
-3. **Dimensional scores** show tactical, positional, and strategic evaluation
+3. **Dimensional scores** show tactical (16D), positional (32D), and strategic (64D) evaluation
 4. **Positive scores** = advantage for White (you)
-5. **Gateway convergence** alerts you when multiple frameworks agree
+5. **Gateway convergence** alerts you when multiple frameworks independently agree
 
 ### MCP Tools
 
@@ -180,63 +264,57 @@ When multiple gateways independently arrive at the same evaluation and recommend
 
 ---
 
-## Use Cases
+## Applications
 
-### For Chess Players
-- **Learn dimensional thinking** - See positions from multiple mathematical perspectives
-- **Avoid blunders** - Real-time detection of hanging pieces and bad trades
-- **Understand "why"** - Not just what move to make, but why it's optimal
+### Chess (Current Proof of Concept)
+- Multi-dimensional position evaluation across tactical/positional/strategic layers
+- Framework-independent move quality assessment through gateway convergence
+- Real-time blunder detection with dimensional analysis
+- Educational tool for understanding multi-perspective decision-making
 
-### For Researchers
-- **Validation of pathological mathematics** - Proof that "unusable" mathematical structures have practical applications
-- **Framework-independent analysis** - Study convergence patterns across different algebraic systems
-- **AI decision-making** - Explore multi-dimensional evaluation for complex decision spaces
+### AI Infrastructure (Platform Vision)
+- **Decision Intelligence** - Multi-framework validation for complex AI decisions
+- **Quantitative Finance** - Portfolio analysis through dimensional risk assessment (CAILculator in development)
+- **Medical Diagnostics** - Multi-framework symptom evaluation with convergence validation
+- **Strategic Planning** - Business decisions analyzed across multiple independent frameworks
+- **AI Safety** - Catching edge cases that single-model systems miss
 
-### For Developers
-- **MCP server example** - Production-ready Model Context Protocol implementation
-- **Multi-framework analysis** - Template for combining different mathematical approaches
-- **Educational AI** - System that explains its reasoning through dimensional analysis
-
----
-
-## Testing & Validation
-
-### Victory Game Statistics (2025-11-16)
-- Total moves: 34
-- Blunders prevented: 16
-- Gateway convergences detected: 8
-- Optimal moves identified: 15
-- Dimensional performance:
-  - 16D Tactical accuracy: 94%
-  - 32D Positional insight: 88%
-  - 64D Strategic planning: 91%
-
-### Test Coverage
-- ✅ Legal move generation in all positions
-- ✅ Blunder detection (hanging pieces, bad trades)
-- ✅ Multi-dimensional evaluation accuracy
-- ✅ Gateway convergence detection
-- ✅ Perspective consistency (all scores from White's viewpoint)
+### For Developers & Researchers
+- **MCP Server Template** - Production-ready Model Context Protocol implementation
+- **Multi-Framework Analysis** - Reference architecture for combining independent mathematical approaches
+- **Applied Pathological Mathematics** - Demonstration that "unusable" mathematical structures have practical value
+- **Framework-Independent Optimization** - Study convergence patterns across different algebraic systems
 
 ---
 
 ## Roadmap
 
-### Current Status (v1.0)
-- ✅ Core dimensional analysis engine
+### Phase 1: Chess (Complete - v1.0)
+- ✅ Core dimensional analysis engine (16D/32D/64D)
 - ✅ Six gateway patterns implemented
-- ✅ Blunder detection integrated
+- ✅ ZDTP protocol for lossless dimensional transmission
 - ✅ Gateway convergence detection
-- ✅ Professional UI with clear explanations
+- ✅ Blunder detection with SEE integration
+- ✅ MCP server with user confirmation safeguards
 
-### Future Enhancements (v2.0+)
-- [ ] Multiplayer mode (human vs human with dimensional analysis)
-- [ ] Gateway selection strategy optimization
-- [ ] Position-type adaptive gateway weighting
-- [ ] PGN export with dimensional annotations
-- [ ] Performance optimization (parallel gateway evaluation)
-- [ ] Extended dimensional analysis (128D, 256D layers)
-- [ ] Mobile/web interface
+### Phase 2: Financial Infrastructure (In Development)
+- **CAILculator** - Quantitative finance application
+- Portfolio risk assessment across dimensional frameworks
+- Multi-asset correlation analysis through gateway patterns
+- Framework-independent optimization for trading strategies
+
+### Phase 3: Platform Expansion
+- Medical diagnostic decision support systems
+- Strategic business planning tools
+- AI safety validation frameworks
+- Natural language processing with dimensional embeddings
+- Extended dimensional analysis (128D, 256D layers)
+
+### Chess Enhancements (Ongoing)
+- Gateway selection strategy optimization
+- Position-type adaptive gateway weighting
+- Performance optimization (parallel gateway evaluation)
+- PGN export with dimensional annotations
 
 ---
 
@@ -271,9 +349,7 @@ ZDTP Chess is currently in private beta. For collaboration inquiries, research p
 
 ## License
 
-Apache License 2.0 - See [LICENSE](LICENSE) for details.
-
-This license includes patent protection and is suitable for both commercial and open-source use.
+Apache License 2.0 with patent protection. See [LICENSE.txt](LICENSE.txt) for details.
 
 ---
 
