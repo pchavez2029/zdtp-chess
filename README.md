@@ -12,7 +12,7 @@
 
 ## What Makes This Different
 
-Traditional chess engines evaluate positions with a **single number**. ZDTP evaluates positions across **three dimensional layers simultaneously**:
+Traditional chess engines evaluate positions with a **single number**. Zero Divisor Transmission Protocol (ZDTP) evaluates positions across **three dimensional layers simultaneously**:
 
 - **16D Tactical Layer** - Immediate threats, hanging pieces, forcing sequences
 - **32D Positional Layer** - Piece coordination, pawn structure, gateway patterns
