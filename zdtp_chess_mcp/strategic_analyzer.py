@@ -12,11 +12,6 @@ This module feeds dimensions 32-63 of the 64D Chingon representation.
 
 import chess
 from typing import List, Dict, Optional
-import sys
-from pathlib import Path
-
-# Add CAILculator MCP to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "cailculator-mcp"))
 
 try:
     from hypercomplex import Sedenion, Pathion, Chingon

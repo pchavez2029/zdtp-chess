@@ -20,15 +20,11 @@ from pathlib import Path
 from typing import Dict, Optional
 import chess
 
-# Add CAILculator MCP to path (most updated version with Clifford Element updates)
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "cailculator-mcp"))
-
 try:
     from hypercomplex import Sedenion
 except ImportError as e:
     raise ImportError(
-        "CAILculator hypercomplex library not found. "
-        "Ensure CAILculator project is in parent directory."
+        "hypercomplex library not found. Install with: pip install hypercomplex>=0.3.4"
     ) from e
 
 

@@ -13,15 +13,11 @@ Future: Optimize encoding for maximum information preservation
 
 import chess
 import sys
-import os
-
-# Add CAILculator path for hypercomplex library access
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'CAILculator'))
 
 try:
     from hypercomplex import Sedenion
 except ImportError:
-    print("Warning: hypercomplex library not found. Install CAILculator.", file=sys.stderr)
+    print("Warning: hypercomplex library not found. Install with: pip install hypercomplex", file=sys.stderr)
     Sedenion = None
 
 # Import Phase 0 path verification

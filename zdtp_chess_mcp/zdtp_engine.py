@@ -17,13 +17,9 @@ for position evaluation!
 
 import chess
 import time
+import sys
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
-import sys
-from pathlib import Path
-
-# Add cailculator-mcp to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "cailculator-mcp"))
 
 try:
     from .dimensional_encoder import encode_position
