@@ -6,9 +6,9 @@ authors = [{name = "Paul Chavez", email = "paul@chavezailabs.com"}]
 requires-python = ">=3.10"
 
 dependencies = [
-    "chess>=1.10.0",
-    "mcp>=0.1.0",
-    "hypercomplex>=1.0.0"
+    "python-chess>=1.999",
+    "mcp>=0.9.0",
+    "hypercomplex>=0.3.4"
 ]
 
 [project.optional-dependencies]
@@ -19,7 +19,7 @@ dev = [
 
 [build-system]
 requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_backend"
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["zdtp_chess_mcp"]

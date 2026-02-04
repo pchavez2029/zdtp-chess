@@ -10,7 +10,7 @@ mcp>=0.9.0
 # Hypercomplex number systems (Sedenions, Pathions, Chingons)
 hypercomplex>=0.3.4
 
-# Standard library dependencies (included with Python 3.8+)
+# Standard library dependencies (included with Python 3.10+)
 # - asyncio
 # - typing
 # - dataclasses

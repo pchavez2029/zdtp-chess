@@ -4,7 +4,7 @@
 
 > *"Better math, less suffering"* - Chavez AI Labs
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10-3.13](https://img.shields.io/badge/python-3.10--3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
 [![Research](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17574868-blue)](https://zenodo.org/records/17574868)
 
@@ -37,42 +37,267 @@ Clear visualization of dimensional scores, gateway patterns, and convergence ind
 
 ---
 
+## Prerequisites
+
+### Required Software
+
+- **Python 3.10 - 3.13** - Python 3.14+ currently has compatibility issues
+  - Download: https://www.python.org/downloads/
+  - **Windows users:** During installation, check "Add Python to PATH"
+- **Claude Desktop** with MCP support
+  - Download: https://claude.ai/download
+
+### Optional (Recommended)
+
+- **Git** for cloning repository
+  - Download: https://git-scm.com/downloads
+  - **Alternative:** Download ZIP file directly from GitHub (see Installation)
+
+### Verify Your Installation
+```bash
+# Check Python version (should show 3.10-3.13)
+python --version
+
+# Check pip is available
+python -m pip --version
+```
+
+---
+
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
-- Model Context Protocol (MCP) support
+### Quick Start (All Platforms)
 
-### Setup
+1. Download ZDTP Chess
+2. Install Python dependencies
+3. Configure Claude Desktop
+4. Restart Claude Desktop
 
-1. **Clone the repository:**
-```bash
+Detailed platform-specific instructions below.
+
+---
+
+### Installation on Windows
+
+#### Step 1: Download ZDTP Chess
+
+**Option A: Using Git**
+```powershell
 git clone https://github.com/pchavez2029/zdtp-chess.git
 cd zdtp-chess
 ```
 
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
+**Option B: Download ZIP (No Git Required)**
+1. Visit https://github.com/pchavez2029/zdtp-chess
+2. Click the green **"Code"** button
+3. Select **"Download ZIP"**
+4. Extract to a permanent location (e.g., `C:\Users\YourName\Documents\zdtp-chess`)
+5. Open PowerShell in the extracted folder:
+   - Navigate to the folder in File Explorer
+   - Hold **Shift + Right-click** in the folder
+   - Select **"Open PowerShell window here"**
+
+#### Step 2: Fix PowerShell Execution Policy (One-time Setup)
+
+If you encounter "cannot be loaded because running scripts is disabled" errors:
+```powershell
+# Run PowerShell as Administrator
+# Right-click PowerShell in Start Menu -> "Run as Administrator"
+
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Type 'Y' and press Enter when prompted
 ```
 
-3. **Configure as MCP server:**
-Add to your MCP client configuration (e.g., Claude Desktop):
+This is a one-time Windows security setting required for Python packages.
+
+#### Step 3: Install Dependencies
+```powershell
+# Important: Use 'python -m pip' on Windows (not just 'pip')
+python -m pip install -r requirements.txt
+```
+
+You may see warnings about scripts not on PATH - these are non-critical and can be ignored.
+
+#### Step 4: Configure Claude Desktop MCP Server
+
+1. Open **Claude Desktop**
+2. Navigate to **Settings -> Developer -> Edit Config**
+   - This opens `claude_desktop_config.json` in your default text editor
+3. Add the ZDTP Chess configuration:
 ```json
 {
   "mcpServers": {
     "zdtp-chess": {
       "command": "python",
-      "args": ["-m", "zdtp_chess_mcp.zdtp_chess_server"]
+      "args": ["-m", "zdtp_chess_mcp"],
+      "cwd": "C:\\Users\\YourName\\Documents\\zdtp-chess",
+      "env": {
+        "PYTHONPATH": "C:\\Users\\YourName\\Documents\\zdtp-chess"
+      }
     }
   }
 }
 ```
 
+**Critical Configuration Notes:**
+- Replace `C:\\Users\\YourName\\Documents\\zdtp-chess` with your **actual installation path**
+- Use **double backslashes** (`\\`) in Windows paths for JSON format
+- Both `cwd` and `PYTHONPATH` must point to the **same directory**
+- The args must be `["-m", "zdtp_chess_mcp"]` NOT `["-m", "zdtp_chess_mcp.zdtp_chess_server"]`
+- If you have other MCP servers, add `zdtp-chess` inside the existing `mcpServers` object
+
+4. **Save** the config file
+5. **Completely close and restart Claude Desktop**
+   - Quit the application entirely, don't just close the window
+   - On Windows: Right-click system tray icon -> "Quit"
+
+#### Step 5: Verify Installation
+
+1. Open Claude Desktop
+2. Go to **Settings -> Developer**
+3. Check MCP Servers list:
+   - `zdtp-chess` should show as **"connected"**
+   - If it shows "failed", see Troubleshooting section below
+
+---
+
+### Installation on macOS/Linux
+
+```bash
+# Clone repository
+git clone https://github.com/pchavez2029/zdtp-chess.git
+cd zdtp-chess
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+Configure Claude Desktop by editing:
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
+Add to configuration:
+```json
+{
+  "mcpServers": {
+    "zdtp-chess": {
+      "command": "python",
+      "args": ["-m", "zdtp_chess_mcp"],
+      "cwd": "/absolute/path/to/zdtp-chess",
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/zdtp-chess"
+      }
+    }
+  }
+}
+```
+
+Replace `/absolute/path/to/zdtp-chess` with your actual installation path. Restart Claude Desktop completely.
+
 ### Requirements
 - `python-chess>=1.999` - Chess move generation and board representation
-- `anthropic-mcp` - Model Context Protocol server
-- Additional dependencies listed in `requirements.txt`
+- `mcp>=0.9.0` - Model Context Protocol server
+- `hypercomplex>=0.3.4` - Hypercomplex number systems (Sedenions, Pathions, Chingons)
+
+---
+
+## Troubleshooting
+
+### "ModuleNotFoundError: No module named 'zdtp_chess_mcp'"
+
+**Causes & Solutions:**
+
+1. **Missing `cwd` or `PYTHONPATH` in config**
+   - Verify your config has BOTH `cwd` AND `PYTHONPATH` set to the installation directory
+
+2. **Incorrect path format (Windows)**
+   - Use double backslashes (`\\`) in JSON paths
+   - Wrong: `"C:\Users\YourName\Documents\zdtp-chess"`
+   - Correct: `"C:\\Users\\YourName\\Documents\\zdtp-chess"`
+
+3. **Claude Desktop not restarted**
+   - Completely quit and restart Claude Desktop (not just close window)
+
+### "Server disconnected" Error
+
+1. **Wrong Python version**
+   - Check: `python --version` (must be 3.10-3.13, NOT 3.14+)
+   - Solution: Install Python 3.13 from https://www.python.org/downloads/
+
+2. **Dependencies not installed**
+   - Run: `python -m pip install -r requirements.txt`
+
+3. **Wrong command in config**
+   - Use: `"args": ["-m", "zdtp_chess_mcp"]`
+   - NOT: `"args": ["-m", "zdtp_chess_mcp.zdtp_chess_server"]`
+
+4. **Python not in PATH**
+   - Use full Python path in config:
+```json
+"command": "C:\\Users\\YourName\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+```
+   - Find your Python path: `where.exe python` (Windows) or `which python` (macOS/Linux)
+
+### Multiple Python Installations
+
+If packages install but you still get ModuleNotFoundError:
+
+```powershell
+# Windows - see all Python installations
+where.exe python
+
+# Check which Python pip uses
+python -m pip --version
+```
+
+Use the full path to your Python 3.13 installation in the config:
+```json
+"command": "C:\\Users\\YourName\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+```
+
+### PowerShell "running scripts is disabled"
+
+```powershell
+# Open PowerShell as Administrator
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Type 'Y' and press Enter
+```
+
+### Can't Find Config File
+
+**Easy method:** Settings -> Developer -> Edit Config (works on all operating systems)
+
+**Manual paths:**
+- Windows: `C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+Note: On Windows, the `AppData` folder is hidden by default. Use Settings -> Developer -> Edit Config instead.
+
+### Python 3.14 Compatibility
+
+If you see:
+```
+pip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_backend'
+```
+
+Python 3.14 has breaking changes in setuptools. Use Python 3.13 or earlier:
+1. Download Python 3.13 from https://www.python.org/downloads/
+2. Install with "Add to PATH" checked
+3. Reinstall dependencies: `python -m pip install -r requirements.txt`
+
+### Getting Help
+
+If you encounter issues not covered here:
+
+1. **Check the logs:** Claude Desktop -> Settings -> Developer -> View logs
+2. **Verify installation:**
+```powershell
+python --version
+python -m pip list | findstr "chess mcp hypercomplex"
+```
+3. **Create a GitHub Issue:** https://github.com/pchavez2029/zdtp-chess/issues
+   - Include your OS, Python version, and error messages from Claude Desktop logs
 
 ---
 
