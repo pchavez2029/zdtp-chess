@@ -6,7 +6,7 @@
 
 [![Python 3.10-3.13](https://img.shields.io/badge/python-3.10--3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
-[![Research](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17574868-blue)](https://zenodo.org/records/17574868)
+[![Research](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17402495-blue)](https://zenodo.org/records/17402495)
 
 ---
 
@@ -335,7 +335,7 @@ When you analyze a chess position in 16D and transmit it to 32D and 64D via ZDTP
 
 ### Example: The Canonical Six
 
-We discovered six fundamental zero divisor patterns that appear consistently across 16D/32D/64D spaces. (Reference: https://zenodo.org/records/17574868)
+We discovered six fundamental zero divisor patterns that appear consistently across 16D/32D/64D spaces. (Reference: https://zenodo.org/records/17402495)
 
 Each pattern provides a different "lens" for evaluating positions. When multiple patterns converge on the same evaluation, you've found framework-independent optimality.
 
@@ -454,7 +454,7 @@ The ZDTP layers run after standard blunder detection, adding strategic insight b
 
 ZDTP Chess is built on research into Cayley-Dickson algebras and zero divisor patterns:
 
-**Research Publication:** [Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six](https://zenodo.org/records/17574868) - Zenodo DOI: 10.5281/zenodo.17574868
+**Research Publication:** [Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six](https://zenodo.org/records/17402495) - Zenodo DOI: 10.5281/zenodo.17402495
 
 ### The Six Gateways
 
