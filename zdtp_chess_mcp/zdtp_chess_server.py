@@ -21,14 +21,19 @@ import mcp.types as types
 from .zdtp_engine import ZDTPEngine, get_best_move, _emergency_see_safety_check
 from .dimensional_encoder import encode_position
 from .dimensional_portal import full_cascade
-from .multidimensional_evaluator import evaluate_position
+from .multidimensional_evaluator import evaluate_position, FortressDampenerResult
 from .opponent_response_analyzer import analyze_opponent_responses
 from .zdtp_showcase import format_zdtp_showcase
+from .stressor_positions import STRESSOR_LIBRARY, get_stressor_category, list_stressor_positions
 
 
 # Game storage
 games: Dict[str, chess.Board] = {}
+eval_histories: Dict[str, list] = {}  # game_id -> list of consensus scores (Master Dampener)
 game_counter = 0
+
+# Master Dampener: max history entries to retain per game
+MAX_EVAL_HISTORY = 10
 
 # Engine instance
 engine = ZDTPEngine(time_limit_ms=5000, max_candidates=15, gateway_strategy='adaptive')
@@ -95,16 +100,28 @@ Ready to begin? Make your first move with chess_make_move!
 """
 
 
-def detect_gateway_convergence(board: chess.Board, threshold: float = 0.1) -> dict:
+def detect_gateway_convergence(board: chess.Board, threshold: float = 0.1, game_id: str = None) -> dict:
     """
     Detect gateway convergence by evaluating position with multiple gateways.
+
+    SESSION 1 UPGRADES (Gemini Peer Review):
+    - Dimensional divergence detection (the "h3 Spike" pattern)
+    - Dead Gateway weighting (Unified Field Theory / Option B)
+    - Per-dimensional layer scores for divergence analysis
+
+    SESSION 0.1 UPGRADE: Master Dampener (Fortress Draw Detection)
+    - Passes eval_history to evaluator for temporal stasis detection
+    - Records consensus scores for future temporal checks
+    - Returns dampener diagnostics in result dict
 
     Args:
         board: Current board position
         threshold: Score difference threshold for convergence (default 0.1)
+        game_id: Game ID for eval history lookup (Master Dampener)
 
     Returns:
-        dict with 'converged' (bool), 'gateways' (list), 'score' (float), 'confidence' (str)
+        dict with convergence data, dimensional divergence, dead gateway info,
+        and Master Dampener diagnostics
     """
     gateways = {
         'King': chess.KING,
@@ -115,30 +132,58 @@ def detect_gateway_convergence(board: chess.Board, threshold: float = 0.1) -> di
         'Pawn': chess.PAWN
     }
 
-    # Evaluate position with each gateway
+    # Look up eval history for Master Dampener
+    history = eval_histories.get(game_id, []) if game_id else []
+
+    # Evaluate position with each gateway, capturing per-layer scores
     scores = {}
+    layer_scores = {}  # {gateway: {16d, 32d, 64d, consensus}}
+    dampener_results = {}  # {gateway: FortressDampenerResult}
     for name, piece_type in gateways.items():
         try:
             state_16d = encode_position(board)
             cascade = full_cascade(state_16d, piece_type, board)
-            analysis = evaluate_position(cascade, board)
+            analysis = evaluate_position(cascade, board, eval_history_64d=history)
 
             # Always use White's perspective
-            score = analysis.consensus_score
+            consensus = analysis.consensus_score
+            tactical = analysis.tactical_16d.score
+            positional = analysis.positional_32d.score
+            strategic = analysis.strategic_64d.score
             if board.turn == chess.BLACK:
-                score *= -1
+                consensus *= -1
+                tactical *= -1
+                positional *= -1
+                strategic *= -1
 
-            scores[name] = score
+            scores[name] = consensus
+            layer_scores[name] = {
+                '16d': tactical,
+                '32d': positional,
+                '64d': strategic,
+                'consensus': consensus
+            }
+
+            # Capture dampener result from first gateway (they share same structural signals)
+            if analysis.dampener:
+                dampener_results[name] = analysis.dampener
         except Exception as e:
-            # Skip this gateway if evaluation fails
             continue
 
     if len(scores) < 2:
         return {'converged': False, 'gateways': [], 'score': 0.0, 'confidence': 'NONE'}
 
+    # ── Dead Gateway Detection (Unified Field Theory / Option B) ──
+    # Immobilized pieces still contribute to algebraic gravity,
+    # but we flag them for transparency.
+    dead_gateways = _detect_dead_gateways(board)
+
+    # ── Dimensional Divergence Detection (the "h3 Spike") ──
+    divergence = _detect_dimensional_divergence(layer_scores)
+
     # Find groups of gateways with similar scores
     score_list = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    converged_gateways = [score_list[0][0]]  # Start with highest-scoring gateway
+    converged_gateways = [score_list[0][0]]
     consensus_score = score_list[0][1]
 
     for gateway_name, score in score_list[1:]:
@@ -156,12 +201,194 @@ def detect_gateway_convergence(board: chess.Board, threshold: float = 0.1) -> di
     else:
         confidence = 'LOW'
 
+    # ── Master Dampener: Record consensus for temporal tracking ──
+    if game_id and game_id in eval_histories:
+        # Record mean consensus across all gateways
+        mean_consensus = sum(scores.values()) / len(scores)
+        eval_histories[game_id].append(mean_consensus)
+        # Trim to max history size
+        if len(eval_histories[game_id]) > MAX_EVAL_HISTORY:
+            eval_histories[game_id] = eval_histories[game_id][-MAX_EVAL_HISTORY:]
+
+    # ── Master Dampener: Aggregate dampener results across gateways ──
+    # Use the dampener from the first gateway that has structural signal
+    # (structural signals come from the same 64D encoding regardless of gateway)
+    primary_dampener = None
+    for gw_name in ['King', 'Queen', 'Knight', 'Bishop', 'Rook', 'Pawn']:
+        if gw_name in dampener_results and dampener_results[gw_name].structural_signal > 0:
+            primary_dampener = dampener_results[gw_name]
+            break
+    if primary_dampener is None and dampener_results:
+        primary_dampener = next(iter(dampener_results.values()))
+
     return {
         'converged': num_converged >= 3,
         'gateways': converged_gateways,
         'score': consensus_score,
         'confidence': confidence,
-        'all_scores': scores
+        'all_scores': scores,
+        'layer_scores': layer_scores,
+        'divergence': divergence,
+        'dead_gateways': dead_gateways,
+        'dampener': primary_dampener,
+    }
+
+
+def _detect_dead_gateways(board: chess.Board) -> dict:
+    """
+    Detect "dead" gateways — pieces that are immobilized or trapped.
+
+    Per Gemini Session 0 conclusion (Unified Field Theory / Option B):
+    Dead gateways STILL CONTRIBUTE to the algebraic gravity of the board,
+    but we flag them for interpretive transparency.
+
+    Returns:
+        dict with 'dead_pieces' list and 'unified_field_note'
+    """
+    dead_pieces = []
+
+    # Check each piece type for mobility
+    piece_types = {
+        'Rook': chess.ROOK,
+        'Bishop': chess.BISHOP,
+        'Knight': chess.KNIGHT,
+    }
+
+    for name, piece_type in piece_types.items():
+        for color in [chess.WHITE, chess.BLACK]:
+            for square in board.pieces(piece_type, color):
+                # Count moves this specific piece can make
+                piece_moves = [
+                    m for m in board.legal_moves
+                    if m.from_square == square
+                ] if board.turn == color else []
+
+                # For the non-moving side, check pseudo-legal moves
+                if board.turn != color:
+                    board_copy = board.copy()
+                    board_copy.turn = color
+                    piece_moves = [
+                        m for m in board_copy.legal_moves
+                        if m.from_square == square
+                    ]
+
+                color_name = "White" if color == chess.WHITE else "Black"
+                if len(piece_moves) == 0:
+                    dead_pieces.append({
+                        'piece': f"{color_name} {name}",
+                        'square': chess.square_name(square),
+                        'mobility': 0,
+                        'status': 'TRAPPED'
+                    })
+                elif len(piece_moves) <= 2:
+                    dead_pieces.append({
+                        'piece': f"{color_name} {name}",
+                        'square': chess.square_name(square),
+                        'mobility': len(piece_moves),
+                        'status': 'RESTRICTED'
+                    })
+
+    return {
+        'dead_pieces': dead_pieces,
+        'unified_field_note': (
+            "Per Unified Field Theory (Session 0): Dead gateways still "
+            "contribute to algebraic gravity. Their patterns shape the "
+            "manifold regardless of physical mobility."
+        ) if dead_pieces else None
+    }
+
+
+def _detect_dimensional_divergence(layer_scores: dict) -> dict:
+    """
+    Detect the "h3 Spike" pattern: 16D fluctuating wildly while
+    32D and 64D remain structurally stable.
+
+    This validates ZDTP's ability to isolate "tactical noise" from
+    "strategic signal" (confirmed in Gemini Session 0).
+
+    Args:
+        layer_scores: {gateway_name: {16d, 32d, 64d, consensus}}
+
+    Returns:
+        dict with divergence metrics and detected patterns
+    """
+    if len(layer_scores) < 3:
+        return {'detected': False, 'pattern': None}
+
+    # Collect per-layer scores across all gateways
+    scores_16d = [ls['16d'] for ls in layer_scores.values()]
+    scores_32d = [ls['32d'] for ls in layer_scores.values()]
+    scores_64d = [ls['64d'] for ls in layer_scores.values()]
+
+    def std_dev(values):
+        if len(values) < 2:
+            return 0.0
+        mean = sum(values) / len(values)
+        variance = sum((v - mean) ** 2 for v in values) / len(values)
+        return variance ** 0.5
+
+    def score_range(values):
+        return max(values) - min(values) if values else 0.0
+
+    std_16d = std_dev(scores_16d)
+    std_32d = std_dev(scores_32d)
+    std_64d = std_dev(scores_64d)
+    range_16d = score_range(scores_16d)
+    range_32d = score_range(scores_32d)
+    range_64d = score_range(scores_64d)
+
+    # Detect h3 Spike: 16D volatile, 32D/64D stable
+    h3_spike = (
+        std_16d > 2.0 * max(std_32d, std_64d, 0.01)
+        and max(std_32d, std_64d) < 1.0
+    )
+
+    # Detect strategic divergence: 64D disagrees with 16D+32D
+    mean_16d = sum(scores_16d) / len(scores_16d)
+    mean_32d = sum(scores_32d) / len(scores_32d)
+    mean_64d = sum(scores_64d) / len(scores_64d)
+    strategic_divergence = abs(mean_64d - (mean_16d + mean_32d) / 2) > 2.0
+
+    # Detect pattern
+    if h3_spike:
+        pattern = 'h3_spike'
+        description = (
+            f"16D TACTICAL NOISE detected (σ={std_16d:.3f}). "
+            f"32D (σ={std_32d:.3f}) and 64D (σ={std_64d:.3f}) remain "
+            f"structurally stable. ZDTP successfully isolates tactical "
+            f"fluctuation from strategic signal."
+        )
+    elif strategic_divergence:
+        pattern = 'strategic_divergence'
+        description = (
+            f"64D STRATEGIC LAYER diverges from 16D/32D consensus. "
+            f"Mean 16D={mean_16d:+.2f}, 32D={mean_32d:+.2f}, "
+            f"64D={mean_64d:+.2f}. Position may have long-term "
+            f"compensation not visible in tactical/positional layers."
+        )
+    else:
+        pattern = 'unified'
+        description = (
+            f"All dimensional layers agree. "
+            f"σ: 16D={std_16d:.3f}, 32D={std_32d:.3f}, 64D={std_64d:.3f}. "
+            f"Canonical Six functioning as unified manifold."
+        )
+
+    return {
+        'detected': h3_spike or strategic_divergence,
+        'pattern': pattern,
+        'description': description,
+        'metrics': {
+            'std_16d': std_16d,
+            'std_32d': std_32d,
+            'std_64d': std_64d,
+            'range_16d': range_16d,
+            'range_32d': range_32d,
+            'range_64d': range_64d,
+            'mean_16d': mean_16d,
+            'mean_32d': mean_32d,
+            'mean_64d': mean_64d,
+        }
     }
 
 
@@ -319,6 +546,60 @@ After analysis, wait for user to explicitly command execution via chess_make_mov
                 },
                 "required": ["game_id"]
             }
+        ),
+        types.Tool(
+            name="chess_load_position",
+            description="""Load a chess position from FEN string or from the Stressor Position Library.
+
+Use this to set up specific positions for analysis, testing, or study.
+Stressor positions are curated test cases from the Gemini Peer Review that
+stress-test ZDTP's dimensional analysis (exchange sacs, locked chains,
+fortress draws, dead gateways, perpetual patterns).
+
+After loading, use chess_check_gateway_convergence for full dimensional analysis.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "fen": {
+                        "type": "string",
+                        "description": "FEN string to load (e.g. 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1')"
+                    },
+                    "stressor_key": {
+                        "type": "string",
+                        "description": "Key from stressor library (e.g. 'french_fortress', 'exchange_sac_petrosian'). Use chess_list_stressors to see all keys."
+                    },
+                    "player_color": {
+                        "type": "string",
+                        "enum": ["white", "black"],
+                        "description": "Which color you are playing (default: side to move in the FEN)",
+                        "default": "white"
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="chess_list_stressors",
+            description="""List all available stressor positions from the ZDTP Stressor Library.
+
+Shows curated positions organized by category:
+- Exchange Sacrifices (16D crash / 32D bind)
+- Locked Chains (French/KID gateway divergence)
+- Perpetual Singularity (material deficit → draw)
+- Topological Finality (fortress draws)
+- Dead Gateway Paradox (immobilized piece contribution)
+
+Use chess_load_position with a stressor_key to load any position.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["all", "exchange_sacrifice", "locked_chain", "perpetual_singularity", "topological_finality", "dead_gateway"],
+                        "description": "Filter by category (default: all)",
+                        "default": "all"
+                    }
+                }
+            }
         )
     ]
 
@@ -342,6 +623,10 @@ async def handle_call_tool(
         return await chess_analyze_move(arguments)
     elif name == "chess_check_gateway_convergence":
         return await chess_check_gateway_convergence(arguments)
+    elif name == "chess_load_position":
+        return await chess_load_position(arguments)
+    elif name == "chess_list_stressors":
+        return await chess_list_stressors(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -365,6 +650,7 @@ async def chess_new_game(args: dict) -> list[types.TextContent]:
 
     board = chess.Board()
     games[game_id] = board
+    eval_histories[game_id] = []  # Master Dampener: fresh history
 
     # Build response with intro screen
     response = show_game_intro()
@@ -712,10 +998,19 @@ async def chess_get_dimensional_analysis(args: dict) -> list[types.TextContent]:
     else:
         gateway_piece = gateway_map.get(gateway_str, chess.KNIGHT)
     
+    # Look up eval history for Master Dampener
+    history = eval_histories.get(game_id, [])
+
     # Encode and cascade (with intelligent tactical/strategic analysis!)
     state_16d = encode_position(board)
     cascade = full_cascade(state_16d, gateway_piece, board)
-    analysis = evaluate_position(cascade, board)
+    analysis = evaluate_position(cascade, board, eval_history_64d=history)
+
+    # Record consensus for temporal tracking
+    if game_id in eval_histories:
+        eval_histories[game_id].append(analysis.consensus_score)
+        if len(eval_histories[game_id]) > MAX_EVAL_HISTORY:
+            eval_histories[game_id] = eval_histories[game_id][-MAX_EVAL_HISTORY:]
 
     # Gateway explanation
     gateway_explanations = {
@@ -863,10 +1158,16 @@ async def chess_analyze_move(args: dict) -> list[types.TextContent]:
     else:
         gateway_piece = gateway_map.get(gateway_str, chess.KNIGHT)
 
+    # Look up eval history for Master Dampener
+    history = eval_histories.get(game_id, [])
+
     # Encode and cascade to get analysis
     state_16d = encode_position(board_copy)
     cascade = full_cascade(state_16d, gateway_piece, board_copy)
-    analysis = evaluate_position(cascade, board_copy)
+    analysis = evaluate_position(cascade, board_copy, eval_history_64d=history)
+
+    # Note: analyze_move does NOT record to eval_history
+    # because it's hypothetical (move not executed)
 
     # BUG #3 FIX: Flip to White's perspective if user is Black
     # ALWAYS show scores from White's perspective (+ = good for White)
@@ -1027,8 +1328,8 @@ async def chess_check_gateway_convergence(args: dict) -> list[types.TextContent]
 
     board = games[game_id]
 
-    # Run convergence check
-    convergence = detect_gateway_convergence(board, threshold)
+    # Run convergence check (with Master Dampener history)
+    convergence = detect_gateway_convergence(board, threshold, game_id=game_id)
 
     # Build response
     response = f"""
@@ -1084,7 +1385,273 @@ Threshold: {threshold} (gateways within ±{threshold} are considered agreeing)
         response += f"  → Consider trying different gateways for detailed analysis\n"
         response += f"  → Position may have complex trade-offs\n"
 
+    # ── SESSION 1: Dimensional Divergence Detection ──
+    divergence = convergence.get('divergence', {})
+    if divergence and divergence.get('detected'):
+        pattern = divergence.get('pattern', 'unknown')
+        pattern_label = {
+            'h3_spike': '⚡ h3 SPIKE — 16D Tactical Noise Detected',
+            'strategic_divergence': '🌀 STRATEGIC DIVERGENCE — 64D Disagrees',
+        }.get(pattern, f'🔍 {pattern.upper()}')
+
+        response += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"  DIMENSIONAL DIVERGENCE (Session 1)\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        response += f"  {pattern_label}\n\n"
+        response += f"  {divergence.get('description', '')}\n"
+
+        metrics = divergence.get('metrics', {})
+        if metrics:
+            response += f"\n  Layer Volatility (σ across gateways):\n"
+            response += f"    16D: σ={metrics.get('std_16d', 0):.4f}  range={metrics.get('range_16d', 0):.4f}  mean={metrics.get('mean_16d', 0):+.4f}\n"
+            response += f"    32D: σ={metrics.get('std_32d', 0):.4f}  range={metrics.get('range_32d', 0):.4f}  mean={metrics.get('mean_32d', 0):+.4f}\n"
+            response += f"    64D: σ={metrics.get('std_64d', 0):.4f}  range={metrics.get('range_64d', 0):.4f}  mean={metrics.get('mean_64d', 0):+.4f}\n"
+    elif divergence:
+        response += f"\n  ✓ Dimensional Layers Unified — Canonical Six functioning as unified manifold.\n"
+        metrics = divergence.get('metrics', {})
+        if metrics:
+            response += f"    σ: 16D={metrics.get('std_16d', 0):.4f}, 32D={metrics.get('std_32d', 0):.4f}, 64D={metrics.get('std_64d', 0):.4f}\n"
+
+    # ── SESSION 1: Per-Layer Gateway Scores ──
+    layer_scores = convergence.get('layer_scores', {})
+    if show_details and layer_scores:
+        response += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"  PER-DIMENSIONAL LAYER SCORES (Session 1)\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        response += f"  {'Gateway':<10} {'16D':>8} {'32D':>8} {'64D':>8} {'Consensus':>10}\n"
+        response += f"  {'─'*10} {'─'*8} {'─'*8} {'─'*8} {'─'*10}\n"
+        for gw_name, layers in sorted(layer_scores.items()):
+            response += f"  {gw_name:<10} {layers['16d']:>+8.3f} {layers['32d']:>+8.3f} {layers['64d']:>+8.3f} {layers['consensus']:>+10.3f}\n"
+
+    # ── SESSION 1: Dead Gateway Detection ──
+    dead_gateways = convergence.get('dead_gateways', {})
+    dead_pieces = dead_gateways.get('dead_pieces', []) if dead_gateways else []
+    if dead_pieces:
+        response += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"  👻 DEAD GATEWAY DETECTION (Session 1)\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        for dp in dead_pieces:
+            status_emoji = '🔒' if dp['status'] == 'TRAPPED' else '⚠️'
+            response += f"  {status_emoji} {dp['piece']} on {dp['square']} — {dp['status']} (mobility: {dp['mobility']})\n"
+        if dead_gateways.get('unified_field_note'):
+            response += f"\n  📐 {dead_gateways['unified_field_note']}\n"
+
+    # ── SESSION 0.1: Master Dampener (Fortress Draw Detection) ──
+    dampener = convergence.get('dampener')
+    if dampener:
+        response += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        response += f"  🏰 MASTER DAMPENER (Session 0.1 - Lean 4 Grounded)\n"
+        response += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        if dampener.active:
+            response += f"  ⚠️  DAMPENER ACTIVE — Fortress conditions detected\n\n"
+            response += f"  Raw Consensus:      {dampener.raw_consensus:+.3f}\n"
+            response += f"  Dampened Consensus: {dampener.dampened_consensus:+.3f}\n"
+            response += f"  Fortress Signal:    {dampener.fortress_signal:.0%}\n\n"
+        else:
+            response += f"  ✓ Dampener inactive\n\n"
+
+        response += f"  Structural Signal:  {dampener.structural_signal:.3f}"
+        if dampener.structural_signal > 0.3:
+            response += " (ABOVE threshold)"
+        elif dampener.structural_signal > 0:
+            response += " (below threshold 0.3)"
+        response += f"\n"
+        response += f"  Temporal Check:     {'CONFIRMED' if dampener.temporal_confirmed else 'not confirmed'}"
+        response += f" ({dampener.eval_history_count} evals in history"
+        if dampener.eval_history_count >= 4:
+            response += f", delta={dampener.eval_stasis_delta:.3f} vs M={dampener.stability_constant_M}"
+        response += f")\n\n"
+        response += f"  {dampener.reason}\n"
+
+        # Show formula
+        if dampener.active:
+            response += f"\n  Formula: Consensus × (1 - FortressSignal)\n"
+            response += f"           {dampener.raw_consensus:+.3f} × (1 - {dampener.fortress_signal:.3f}) = {dampener.dampened_consensus:+.3f}\n"
+
     response += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+    return [types.TextContent(type="text", text=response)]
+
+
+async def chess_load_position(args: dict) -> list[types.TextContent]:
+    """
+    Load a chess position from FEN or stressor key.
+
+    Session 1 Feature: Enables testing specific positions from the
+    Stressor Position Library defined in Gemini Peer Review Session 0.
+    """
+    global game_counter
+
+    fen = args.get("fen")
+    stressor_key = args.get("stressor_key")
+    player_color = args.get("player_color")
+
+    # Must provide either FEN or stressor key
+    if not fen and not stressor_key:
+        return [types.TextContent(type="text", text="""
+╔══════════════════════════════════════════════════════════════╗
+║  ❌ ERROR: Must provide either 'fen' or 'stressor_key'       ║
+╚══════════════════════════════════════════════════════════════╝
+
+Examples:
+  chess_load_position(fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1")
+  chess_load_position(stressor_key="french_fortress")
+
+Use chess_list_stressors to see all available stressor keys.
+""")]
+
+    # Load stressor position
+    stressor_info = None
+    if stressor_key:
+        if stressor_key not in STRESSOR_LIBRARY:
+            available = ', '.join(sorted(STRESSOR_LIBRARY.keys()))
+            return [types.TextContent(type="text", text=f"""
+╔══════════════════════════════════════════════════════════════╗
+║  ❌ ERROR: Unknown stressor key '{stressor_key}'              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Available keys:
+  {available}
+
+Use chess_list_stressors for full descriptions.
+""")]
+        stressor_info = STRESSOR_LIBRARY[stressor_key]
+        fen = stressor_info["fen"]
+
+    # Validate and create board from FEN
+    try:
+        board = chess.Board(fen)
+    except ValueError as e:
+        return [types.TextContent(type="text", text=f"""
+╔══════════════════════════════════════════════════════════════╗
+║  ❌ ERROR: Invalid FEN string                                ║
+╚══════════════════════════════════════════════════════════════╝
+
+{str(e)}
+
+FEN provided: {fen}
+""")]
+
+    # Create game
+    game_id = f"zdtp_game_{game_counter}"
+    game_counter += 1
+    games[game_id] = board
+    eval_histories[game_id] = []  # Master Dampener: fresh history for loaded position
+
+    # Determine player color from FEN if not specified
+    if not player_color:
+        player_color = "white" if board.turn == chess.WHITE else "black"
+
+    # Build response
+    response = f"""
+╔══════════════════════════════════════════════════════════════╗
+║  📋 POSITION LOADED                                          ║
+╚══════════════════════════════════════════════════════════════╝
+
+Game ID: {game_id}
+Your color: {player_color.upper()}
+Side to move: {'White' if board.turn == chess.WHITE else 'Black'}
+Move number: {board.fullmove_number}
+"""
+
+    if stressor_info:
+        difficulty_emoji = {"medium": "🟡", "hard": "🟠", "expert": "🔴"}.get(
+            stressor_info.get("difficulty", ""), "⚪"
+        )
+        response += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  STRESSOR: {stressor_info['name']}  {difficulty_emoji}
+  Category: {stressor_info['category'].replace('_', ' ').title()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{stressor_info['description']}
+"""
+        # Show expected behavior hints
+        for key, value in stressor_info.items():
+            if key.startswith('expected_'):
+                label = key.replace('expected_', '').replace('_', ' ').title()
+                response += f"\n  Expected {label}: {value}"
+
+        if stressor_info.get('test_move'):
+            response += f"\n\n  💡 Suggested test move: {stressor_info['test_move']}"
+            response += f"\n     Use chess_analyze_move to test without executing."
+
+    response += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  POSITION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{board}
+
+FEN: {fen}
+Legal moves: {len(list(board.legal_moves))}
+"""
+
+    if board.is_check():
+        response += "\n⚠️ IN CHECK"
+
+    response += """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RECOMMENDED NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. chess_check_gateway_convergence - Full 6-gateway analysis
+  2. chess_get_dimensional_analysis  - Single gateway deep dive
+  3. chess_analyze_move              - Test specific moves
+  4. chess_make_move                 - Play a move
+"""
+
+    return [types.TextContent(type="text", text=response)]
+
+
+async def chess_list_stressors(args: dict) -> list[types.TextContent]:
+    """
+    List all stressor positions from the ZDTP Stressor Library.
+
+    Session 1 Feature: Displays the curated test positions from
+    the Gemini Peer Review Stressor Roadmap.
+    """
+    category = args.get("category", "all")
+
+    if category == "all":
+        response = list_stressor_positions()
+    else:
+        positions = get_stressor_category(category)
+        if not positions:
+            return [types.TextContent(type="text", text=f"No positions found for category: {category}")]
+
+        category_titles = {
+            "exchange_sacrifice": "💥 EXCHANGE SACRIFICES",
+            "locked_chain": "🔒 LOCKED CHAINS",
+            "perpetual_singularity": "♾️  PERPETUAL SINGULARITY",
+            "topological_finality": "🏔️  TOPOLOGICAL FINALITY",
+            "dead_gateway": "👻 DEAD GATEWAY PARADOX",
+        }
+
+        title = category_titles.get(category, category.upper())
+        lines = []
+        lines.append(f"╔══════════════════════════════════════════════════════════════╗")
+        lines.append(f"║  {title:<58} ║")
+        lines.append(f"╚══════════════════════════════════════════════════════════════╝")
+        lines.append("")
+
+        for pos in positions:
+            difficulty_emoji = {"medium": "🟡", "hard": "🟠", "expert": "🔴"}.get(
+                pos["difficulty"], "⚪"
+            )
+            lines.append(f"  {difficulty_emoji} {pos['key']}")
+            lines.append(f"     {pos['name']}")
+            lines.append(f"     {pos['description'][:80]}...")
+            lines.append(f"     FEN: {pos['fen']}")
+            if pos.get('test_move'):
+                lines.append(f"     Test move: {pos['test_move']}")
+            lines.append("")
+
+        lines.append(f"Total: {len(positions)} positions in {category}")
+        lines.append(f"\nLoad: chess_load_position(stressor_key='...')")
+        response = "\n".join(lines)
 
     return [types.TextContent(type="text", text=response)]
 
@@ -1100,6 +1667,7 @@ async def run_test_move_14_ne5_analysis() -> list[types.TextContent]:
 
     # Create or reset the test game
     games[test_game_id] = chess.Board(move_14_fen)
+    eval_histories[test_game_id] = []  # Master Dampener: fresh history
 
     # Call chess_analyze_move
     result = await chess_analyze_move(

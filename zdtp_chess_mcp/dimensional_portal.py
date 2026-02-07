@@ -305,11 +305,15 @@ class DimensionalPortal:
             gateway_64d_features = interaction_coeffs[24:28]  # Corresponding features
 
             # Compute all 32 strategic features
+            # Session 0.1: Pass gateway_P and conjugate_Q for
+            # formally verified features (tactical ceiling, zugzwang)
             strategic_features = compute_strategic_features(
                 board,
                 state_32d,
                 gateway_32d_features,
-                gateway_64d_features
+                gateway_64d_features,
+                gateway_P=gateway_P,
+                conjugate_Q=conjugate_Q
             )  # Returns 32 values
 
             # Construct 64D with INTENTIONAL strategic assignments

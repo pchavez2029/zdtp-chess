@@ -20,13 +20,21 @@ Key Insight: Different dimensional spaces emphasize different chess features.
 - Weight: Advancement > Complexity > Gateway harmony
 - Added info: Dual gateway influence in coefficients 32-63
 
+Session 0.1 Upgrade: Master Dampener (Fortress Draw Detection)
+- Grounded in Lean 4 Stability Theorem: |C[f]| <= M * ||f||_1
+- When 64D evaluation stasis is detected (delta_V64 < M over 4 evals)
+  AND structural fortress indicators fire (dims 45, 47, 51),
+  the Master Dampener pulls consensus toward 0.0 (draw).
+- Formula: Final Eval = Consensus * (1 - FortressSignal)
+
 Reference: Paul Chavez's published research on framework-independent
 zero divisor patterns and dimensional information theory.
 """
 
 import chess
+import math
 from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 try:
     from hypercomplex import Sedenion, Pathion, Chingon
@@ -78,6 +86,30 @@ class StrategicEvaluation:
 
 
 @dataclass
+class FortressDampenerResult:
+    """Result of Master Dampener (Fortress Draw Detection).
+    
+    Grounded in Lean 4 Stability Theorem (Thm 2):
+    When the 64D manifold ceases to evolve, the Chavez Transform
+    is bounded by the Stability Constant M = (||P||^2 + ||Q||^2) * sqrt(pi/alpha).
+    
+    The dampener fires when:
+    1. Structural signals detect fortress topology (dims 45, 47, 51)
+    2. Temporal confirmation: eval stasis over 4+ evaluations
+    """
+    active: bool = False                    # Is dampener firing?
+    structural_signal: float = 0.0          # 0-1 from dims 45, 47, 51
+    temporal_confirmed: bool = False         # 4-eval stasis check passed?
+    fortress_signal: float = 0.0            # Final signal (structural * temporal)
+    raw_consensus: float = 0.0              # Pre-dampener consensus
+    dampened_consensus: float = 0.0         # Post-dampener consensus
+    eval_history_count: int = 0             # Number of evals in history
+    eval_stasis_delta: float = 0.0          # max-min of last 4 evals
+    stability_constant_M: float = 0.5       # Threshold for stasis
+    reason: str = ""                        # Human-readable explanation
+
+
+@dataclass
 class MultiDimensionalAnalysis:
     """Complete multi-dimensional analysis of a position."""
     tactical_16d: TacticalEvaluation
@@ -87,6 +119,7 @@ class MultiDimensionalAnalysis:
     recommended_move: Optional[str]
     gateway_used: str
     overall_assessment: str
+    dampener: Optional[FortressDampenerResult] = None
 
 
 class MultidimensionalEvaluator:
@@ -125,7 +158,8 @@ class MultidimensionalEvaluator:
     def evaluate_cascade(
         self,
         cascade_results: Dict,
-        board: chess.Board
+        board: chess.Board,
+        eval_history_64d: Optional[List[float]] = None
     ) -> MultiDimensionalAnalysis:
         """
         Evaluate a position using complete ZDTP cascade results.
@@ -133,6 +167,8 @@ class MultidimensionalEvaluator:
         Args:
             cascade_results: Results from dimensional_portal.full_cascade()
             board: Current chess board position
+            eval_history_64d: Previous consensus scores for Master Dampener
+                              temporal confirmation. None or [] disables temporal check.
             
         Returns:
             MultiDimensionalAnalysis with all three dimensional evaluations
@@ -150,14 +186,20 @@ class MultidimensionalEvaluator:
         strategic = self._evaluate_64d_strategic(state_64d, board,
                                                  cascade_results['portal_32_64'])
         
-        # Build consensus
-        consensus_score = self._build_consensus(tactical, positional, strategic)
+        # Build consensus (now with Master Dampener)
+        consensus_score, dampener = self._build_consensus(
+            tactical, positional, strategic,
+            state_64d=state_64d,
+            eval_history_64d=eval_history_64d or []
+        )
         
         # Determine recommended move
         recommended_move = self._recommend_move(tactical, positional, strategic, board)
         
-        # Overall assessment
-        assessment = self._generate_assessment(tactical, positional, strategic, consensus_score)
+        # Overall assessment (uses dampened consensus)
+        assessment = self._generate_assessment(
+            tactical, positional, strategic, consensus_score, dampener
+        )
         
         return MultiDimensionalAnalysis(
             tactical_16d=tactical,
@@ -166,7 +208,8 @@ class MultidimensionalEvaluator:
             consensus_score=consensus_score,
             recommended_move=recommended_move,
             gateway_used=gateway_piece,
-            overall_assessment=assessment
+            overall_assessment=assessment,
+            dampener=dampener
         )
     
     def _evaluate_16d_tactical(
@@ -358,38 +401,173 @@ class MultidimensionalEvaluator:
             reasoning=reasoning
         )
     
+    # ═══════════════════════════════════════════════════════════════
+    #  MASTER DAMPENER CONSTANTS (Session 0.1, Lean 4 Grounded)
+    # ═══════════════════════════════════════════════════════════════
+
+    # Stability Constant M: threshold for eval stasis detection.
+    # From Lean 4 Stability Theorem: |C[f]| <= M * ||f||_1
+    # M = (||P||^2 + ||Q||^2) * sqrt(pi/alpha)
+    # For typical ZDTP gateway norms ~1.0 and alpha=1.0:
+    #   M ≈ 2.0 * sqrt(pi) ≈ 3.54
+    # We use a practical threshold: if the range of the last 4
+    # consensus scores is less than M, the position is "static".
+    STABILITY_CONSTANT_M = 0.5  # Practical threshold (tighter than theoretical)
+
+    # Minimum evaluations before temporal check can activate
+    MIN_EVALS_FOR_DAMPENER = 4
+
+    # Maximum history entries to retain
+    MAX_EVAL_HISTORY = 10
+
+    # Minimum tactical score to consider dampening
+    # (only dampen when one side appears to have advantage)
+    DAMPENER_TACTICAL_THRESHOLD = 1.5
+
     def _build_consensus(
         self,
         tactical: TacticalEvaluation,
         positional: PositionalEvaluation,
-        strategic: StrategicEvaluation
-    ) -> float:
+        strategic: StrategicEvaluation,
+        state_64d: Optional[Chingon] = None,
+        eval_history_64d: Optional[List[float]] = None
+    ) -> Tuple[float, FortressDampenerResult]:
         """
-        Build consensus score from three dimensional evaluations.
+        Build consensus score from three dimensional evaluations,
+        then apply Master Dampener if fortress conditions are met.
+
+        Session 0.1 Upgrade: Master Dampener (Fortress Draw Detection)
+
+        The dampener has two independent signal paths:
+        1. STRUCTURAL: Dims 45 (leverage_deficiency), 47 (fortress_structural),
+           51 (draw_signal) from the 64D Chingon encoding
+        2. TEMPORAL: Eval stasis over the last 4 evaluations (delta < M)
+
+        Both must fire for full dampening. Structural alone gives partial.
+
+        Formula: Final = Consensus × (1 - FortressSignal)
 
         Weights: 16D (50%), 32D (30%), 64D (20%)
-        Tactical considerations dominate in chess, but positional and
-        strategic factors provide important context.
 
         CRITICAL SAFETY OVERRIDE (2025-11-20):
         If tactical score is catastrophically bad (< -10), consensus cannot
-        be positive. This prevents misleading "slight advantage" claims when
-        there's a critical tactical blunder (e.g., hanging queen).
+        be positive.
         """
-        consensus = (
+        # ── Step 1: Raw consensus (unchanged formula) ──
+        raw_consensus = (
             0.5 * tactical.score +
             0.3 * positional.score +
             0.2 * strategic.score
         )
 
-        # SAFETY OVERRIDE: If tactical disaster detected, cap consensus at tactical score
-        # This ensures consensus reflects reality when there's a critical blunder
+        # SAFETY OVERRIDE: If tactical disaster, cap consensus
         if tactical.score < -10.0:
-            # Catastrophic tactical blunder (losing major piece)
-            # Consensus CANNOT be better than the tactical score
-            consensus = min(consensus, tactical.score)
+            raw_consensus = min(raw_consensus, tactical.score)
 
-        return consensus
+        # ── Step 2: Extract fortress structural signals from 64D ──
+        structural_signal = 0.0
+        dim_45 = 0.0  # leverage_deficiency
+        dim_47 = 0.0  # fortress_structural
+        dim_51 = 0.0  # draw_signal
+
+        if state_64d is not None:
+            try:
+                coeffs = list(state_64d.coefficients())
+                # Dims 44-47: Verified positional features
+                # dim 44 = space_vs_material, dim 45 = leverage_deficiency
+                # dim 46 = activity_vs_structure, dim 47 = fortress_structural
+                dim_45 = coeffs[45] if len(coeffs) > 45 else 0.0
+                dim_47 = coeffs[47] if len(coeffs) > 47 else 0.0
+                # Dims 48-51: Draw detection features
+                # dim 48 = OCB, dim 49 = insufficient, dim 50 = no passers
+                # dim 51 = draw_signal (master local draw indicator)
+                dim_51 = coeffs[51] if len(coeffs) > 51 else 0.0
+
+                # Structural signal: weighted combination
+                # leverage_deficiency is the strongest indicator
+                structural_signal = (
+                    0.40 * dim_45 +   # Pawn energy absence
+                    0.35 * dim_47 +   # Composite fortress structure
+                    0.25 * dim_51     # Draw indicators (OCB, insuf, etc.)
+                )
+                structural_signal = max(0.0, min(1.0, structural_signal))
+            except Exception:
+                structural_signal = 0.0
+
+        # ── Step 3: Temporal confirmation (eval stasis check) ──
+        temporal_confirmed = False
+        eval_stasis_delta = float('inf')
+        history_count = len(eval_history_64d) if eval_history_64d else 0
+
+        if eval_history_64d and len(eval_history_64d) >= self.MIN_EVALS_FOR_DAMPENER:
+            last_n = eval_history_64d[-self.MIN_EVALS_FOR_DAMPENER:]
+            eval_stasis_delta = max(last_n) - min(last_n)
+            # Stasis: evaluation range is below stability constant
+            temporal_confirmed = eval_stasis_delta < self.STABILITY_CONSTANT_M
+
+        # ── Step 4: Compute fortress signal and apply dampener ──
+        # Fortress signal requires:
+        #   - Structural signal > 0.3 (meaningful fortress indicators)
+        #   - abs(raw_consensus) > threshold (there IS an advantage to dampen)
+        fortress_signal = 0.0
+        dampener_active = False
+        reason = ""
+
+        if structural_signal > 0.3 and abs(raw_consensus) > self.DAMPENER_TACTICAL_THRESHOLD:
+            if temporal_confirmed:
+                # FULL DAMPENER: Both structural and temporal confirmed
+                fortress_signal = structural_signal
+                dampener_active = True
+                reason = (
+                    f"FORTRESS DETECTED: Structural signal {structural_signal:.2f} "
+                    f"(dim45={dim_45:.2f}, dim47={dim_47:.2f}, dim51={dim_51:.2f}) "
+                    f"+ Temporal stasis confirmed (delta={eval_stasis_delta:.3f} < "
+                    f"M={self.STABILITY_CONSTANT_M}). "
+                    f"Master Dampener active: eval pulled toward draw."
+                )
+            elif history_count < self.MIN_EVALS_FOR_DAMPENER:
+                # PARTIAL: Structural fires but insufficient history
+                # Apply half-strength dampening as a warning signal
+                fortress_signal = structural_signal * 0.5
+                dampener_active = True
+                reason = (
+                    f"FORTRESS PROBABLE: Structural signal {structural_signal:.2f} "
+                    f"but insufficient eval history ({history_count}/{self.MIN_EVALS_FOR_DAMPENER}). "
+                    f"Half-strength dampener active. Run more evaluations to confirm."
+                )
+            else:
+                # Structural fires but temporal does NOT confirm (eval is changing)
+                fortress_signal = 0.0
+                reason = (
+                    f"Fortress structure detected (signal={structural_signal:.2f}) "
+                    f"but position is evolving (delta={eval_stasis_delta:.3f} >= "
+                    f"M={self.STABILITY_CONSTANT_M}). Dampener NOT active."
+                )
+        elif structural_signal > 0.0:
+            reason = (
+                f"Mild fortress indicators (signal={structural_signal:.2f}) "
+                f"below activation threshold (0.3). No dampening."
+            )
+        else:
+            reason = "No fortress indicators detected."
+
+        # Apply: Final Eval = Consensus × (1 - FortressSignal)
+        dampened_consensus = raw_consensus * (1.0 - fortress_signal)
+
+        dampener = FortressDampenerResult(
+            active=dampener_active,
+            structural_signal=structural_signal,
+            temporal_confirmed=temporal_confirmed,
+            fortress_signal=fortress_signal,
+            raw_consensus=raw_consensus,
+            dampened_consensus=dampened_consensus,
+            eval_history_count=history_count,
+            eval_stasis_delta=eval_stasis_delta if eval_stasis_delta != float('inf') else 0.0,
+            stability_constant_M=self.STABILITY_CONSTANT_M,
+            reason=reason
+        )
+
+        return dampened_consensus, dampener
     
     def _recommend_move(
         self,
@@ -422,7 +600,8 @@ class MultidimensionalEvaluator:
         tactical: TacticalEvaluation,
         positional: PositionalEvaluation,
         strategic: StrategicEvaluation,
-        consensus_score: float
+        consensus_score: float,
+        dampener: Optional[FortressDampenerResult] = None
     ) -> str:
         """Generate overall position assessment."""
         # Determine who's better
@@ -436,8 +615,20 @@ class MultidimensionalEvaluator:
             advantage = "Black has a slight advantage"
         else:
             advantage = "Position is approximately equal"
-        
-        return f"{advantage}. {tactical.reasoning}"
+
+        assessment = f"{advantage}. {tactical.reasoning}"
+
+        # Add dampener note if active
+        if dampener and dampener.active:
+            raw = dampener.raw_consensus
+            final = dampener.dampened_consensus
+            signal = dampener.fortress_signal
+            assessment += (
+                f" [MASTER DAMPENER: Raw eval {raw:+.2f} → {final:+.2f} "
+                f"(fortress signal {signal:.0%})]"
+            )
+
+        return assessment
     
     # Helper methods
     
@@ -653,17 +844,24 @@ _evaluator = None
 
 def evaluate_position(
     cascade_results: Dict,
-    board: chess.Board
+    board: chess.Board,
+    eval_history_64d: Optional[List[float]] = None
 ) -> MultiDimensionalAnalysis:
     """
     Evaluate a position using ZDTP cascade results.
     
     Convenience function for quick evaluation.
+    
+    Args:
+        cascade_results: Results from dimensional_portal.full_cascade()
+        board: Current chess board position
+        eval_history_64d: Previous consensus scores for Master Dampener.
+                          Pass the game's eval history list for fortress detection.
     """
     global _evaluator
     if _evaluator is None:
         _evaluator = MultidimensionalEvaluator()
-    return _evaluator.evaluate_cascade(cascade_results, board)
+    return _evaluator.evaluate_cascade(cascade_results, board, eval_history_64d)
 
 
 # Standalone test
