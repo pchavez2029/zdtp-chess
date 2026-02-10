@@ -35,6 +35,21 @@ Industry-standard Static Exchange Evaluation (SEE) integrated with dimensional a
 ### Educational Interface
 Clear visualization of dimensional scores, gateway patterns, and convergence indicators help players understand not just *what* move to make, but *why* it's optimal across multiple mathematical frameworks.
 
+### Candidate Suggester (Session 2)
+
+LLMs systematically miss pawn moves, defensive resources, and quiet positional moves when playing chess. They fixate on "obvious" piece moves while overlooking quiet pawn advances, pawn captures, and defensive interpositions. No amount of prompting fixes this because the bias operates below the reasoning layer.
+
+The `chess_suggest_candidates` tool solves this by categorizing **every legal move** by tactical function before the LLM makes any recommendation:
+
+| Category | When It Appears | Subcategories |
+|---|---|---|
+| **Forcing** | Always | checks, captures, promotions, threatens promotion |
+| **Defensive** | Only when pieces are attacked | escape, pawn defends, piece defends, counterattack |
+| **Developing** | Always | castling, center pawn advance, minor piece development, rook activation |
+| **Quiet** | Only on request | everything else |
+
+Each move includes a Static Exchange Evaluation (SEE) safety assessment so the LLM sees material-loss warnings inline before recommending a move.
+
 ### Master Dampener (Session 0.1)
 Formally verified fortress draw detection. When structural signals (locked pawns, opposite-color bishops, insufficient material) combine with temporal stasis (evaluation unchanged over 4+ moves), the Master Dampener pulls evaluation toward 0.0 (draw). Formula: `Consensus × (1 - FortressSignal)`
 
@@ -384,6 +399,7 @@ ZDTP enables **lossless data movement** between higher-dimensional mathematical 
 ZDTP Chess provides the following tools through the Model Context Protocol:
 
 - **chess_new_game** - Start a new game
+- **chess_suggest_candidates** - Categorize all legal moves by type (forcing/defensive/developing/quiet)
 - **chess_make_move** - Execute a move (requires explicit user confirmation)
 - **chess_analyze_move** - Preview move consequences without executing (what-if analysis)
 - **chess_get_board** - Display current position and game state
@@ -392,7 +408,7 @@ ZDTP Chess provides the following tools through the Model Context Protocol:
 - **chess_load_position** - Load a position from FEN or the Stressor Library (Session 0.1)
 - **chess_list_stressors** - List curated test positions for dimensional analysis stress testing
 
-**Important:** Moves require explicit user permission. Use `chess_analyze_move` to explore options safely before committing with `chess_make_move`.
+**Recommended workflow:** Call `chess_suggest_candidates` first to see the full tactical landscape, then use `chess_analyze_move` to deep-dive promising candidates, then execute with `chess_make_move`.
 
 ### Example Analysis Output
 
@@ -430,6 +446,34 @@ CONSENSUS EVALUATION: +0.94 (slight advantage: WHITE)
 
 💡 SUGGESTED MOVES: Nf3 (develop), c4 (Queen's Gambit), Bf4 (bishop out)
 ```
+
+### Example: Using the Candidate Suggester
+
+After starting a game and reaching a complex middlegame position, ask Claude to survey your options:
+
+> **You:** "What are my best options here?"
+
+Claude calls `chess_suggest_candidates` and responds with the full tactical landscape:
+
+> **Claude:**
+>
+> Here's what I see across all 41 legal moves:
+>
+> **Forcing moves:**
+> - **dxc6** (pawn capture) - Safe trade, wins a pawn
+> - **Qxa5** (piece capture) - WARNING: Your queen hangs after recapture (loses 5.8 material)
+>
+> **Defensive moves:**
+> - **h3** - Moves your pawn off the attacked h2 square
+> - **e4** - Your pawn now defends the d5 pawn that's under pressure
+>
+> **Developing moves:**
+> - **e3** - Center pawn advance, strengthens your pawn chain
+> - **Rec1** - Rook activates on the semi-open c-file
+>
+> The quiet pawn capture **dxc6** stands out - it's safe and wins material. Want me to run a deeper ZDTP analysis on it?
+
+Without the Candidate Suggester, the LLM would likely recommend the flashy queen capture and miss the safe pawn win entirely.
 
 ---
 
@@ -536,6 +580,13 @@ When multiple gateways independently arrive at the same evaluation and recommend
 - ✅ **Zugzwang Coefficient** - Non-commutativity measure |P·x - x·P| (Dim 63)
 - ✅ **Stressor Position Library** - Curated test positions for dimensional analysis validation
 - ✅ **Temporal Confirmation** - 4-eval history check for fortress stasis detection
+
+### Session 2: Candidate Suggester (Complete)
+- ✅ **Move Categorization Engine** - Every legal move classified into forcing/defensive/developing/quiet
+- ✅ **SEE Safety Per Move** - Inline material-loss warnings using battle-tested Static Exchange Evaluation
+- ✅ **Attacked Piece Detection** - Identifies all friendly pieces under attack with attacker/defender counts
+- ✅ **Workflow Integration** - System prompt updated to call `chess_suggest_candidates` before recommending moves
+- ✅ **12-Test Validation Suite** - Covers starting position, hanging pieces, checks, captures, promotions, castling, and JSON structure
 
 ### Phase 2: Financial Infrastructure (In Development)
 - **CAILculator** - Quantitative finance application via MCP server
