@@ -11,6 +11,7 @@ Provides tools for:
 """
 
 import asyncio
+import json
 import chess
 from typing import Dict, Optional
 from mcp.server import Server, NotificationOptions
@@ -25,6 +26,7 @@ from .multidimensional_evaluator import evaluate_position, FortressDampenerResul
 from .opponent_response_analyzer import analyze_opponent_responses
 from .zdtp_showcase import format_zdtp_showcase
 from .stressor_positions import STRESSOR_LIBRARY, get_stressor_category, list_stressor_positions
+from .candidate_suggester import categorize_all_moves, format_suggestion_response
 
 
 # Game storage
@@ -77,12 +79,14 @@ HOW IT WORKS:
 GOAL: Learn chess through multi-dimensional mathematical analysis
 
 RECOMMENDED WORKFLOW:
-  1. chess_analyze_move - Explore moves safely (no execution)
-  2. Compare options and ZDTP scores
-  3. User decides which move to play
-  4. chess_make_move - Execute the chosen move (requires explicit user command)
+  1. chess_suggest_candidates - See ALL categorized moves (forcing/defensive/developing)
+  2. chess_analyze_move - Deep-dive promising candidates (no execution)
+  3. Compare options and ZDTP scores
+  4. User decides which move to play
+  5. chess_make_move - Execute the chosen move (requires explicit user command)
 
 COMMANDS:
+  chess_suggest_candidates - Categorize ALL legal moves (call FIRST before recommending!)
   chess_analyze_move     - Preview a move WITHOUT executing (what-if analysis)
   chess_make_move        - Execute your move (only when explicitly commanded!)
   chess_get_dimensional_analysis - Detailed position breakdown
@@ -600,6 +604,43 @@ Use chess_load_position with a stressor_key to load any position.""",
                     }
                 }
             }
+        ),
+        types.Tool(
+            name="chess_suggest_candidates",
+            description="""Categorize ALL legal moves by type to reveal the complete tactical landscape.
+
+Fixes LLM blind spots: systematically surfaces pawn moves, defensive resources,
+and quiet positional moves that LLMs tend to overlook.
+
+Categories (priority order):
+  1. FORCING  - checks, captures, promotions, threatens promotion
+  2. DEFENSIVE - defends attacked pieces, counterattacks, escapes
+  3. DEVELOPING - castling, center pawn advances, piece development
+  4. QUIET - everything else (optional, off by default)
+
+Each move includes SEE (Static Exchange Evaluation) safety assessment.
+
+RECOMMENDED: Call this BEFORE choosing a move to ensure nothing is missed.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "game_id": {
+                        "type": "string",
+                        "description": "Game ID from chess_new_game or chess_load_position"
+                    },
+                    "max_per_category": {
+                        "type": "integer",
+                        "description": "Maximum moves to show per category (default 3, 0 = unlimited)",
+                        "default": 3
+                    },
+                    "include_quiet": {
+                        "type": "boolean",
+                        "description": "Include quiet (non-tactical, non-developing) moves (default false)",
+                        "default": False
+                    }
+                },
+                "required": ["game_id"]
+            }
         )
     ]
 
@@ -627,6 +668,8 @@ async def handle_call_tool(
         return await chess_load_position(arguments)
     elif name == "chess_list_stressors":
         return await chess_list_stressors(arguments)
+    elif name == "chess_suggest_candidates":
+        return await chess_suggest_candidates(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -1597,10 +1640,11 @@ Legal moves: {len(list(board.legal_moves))}
   RECOMMENDED NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  1. chess_check_gateway_convergence - Full 6-gateway analysis
-  2. chess_get_dimensional_analysis  - Single gateway deep dive
-  3. chess_analyze_move              - Test specific moves
-  4. chess_make_move                 - Play a move
+  1. chess_suggest_candidates         - See ALL categorized moves first
+  2. chess_check_gateway_convergence - Full 6-gateway analysis
+  3. chess_get_dimensional_analysis  - Single gateway deep dive
+  4. chess_analyze_move              - Test specific moves
+  5. chess_make_move                 - Play a move
 """
 
     return [types.TextContent(type="text", text=response)]
@@ -1654,6 +1698,25 @@ async def chess_list_stressors(args: dict) -> list[types.TextContent]:
         response = "\n".join(lines)
 
     return [types.TextContent(type="text", text=response)]
+
+
+async def chess_suggest_candidates(args: dict) -> list[types.TextContent]:
+    """Categorize all legal moves by type for complete tactical awareness."""
+    game_id = args.get("game_id")
+    max_per_category = args.get("max_per_category", 3)
+    include_quiet = args.get("include_quiet", False)
+
+    if not game_id or game_id not in games:
+        return [types.TextContent(type="text", text=f"Game {game_id} not found")]
+
+    board = games[game_id]
+    suggestion = categorize_all_moves(board, max_per_category, include_quiet)
+    response_dict = format_suggestion_response(suggestion)
+
+    return [types.TextContent(
+        type="text",
+        text=json.dumps(response_dict, indent=2)
+    )]
 
 
 async def run_test_move_14_ne5_analysis() -> list[types.TextContent]:
