@@ -507,10 +507,10 @@ def categorize_all_moves(
 
     # Sort defensive by subcategory priority
     _def_priority = {
-        'escape': 0,
-        'pawn_defends': 1,
-        'piece_defends': 2,
-        'counterattack': 3,
+        'pawn_defends': 0,
+        'piece_defends': 1,
+        'counterattack': 2,
+        'escape': 3,
     }
     defensive.sort(key=lambda e: _def_priority.get(e.subcategory, 99))
 
