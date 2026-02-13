@@ -319,6 +319,202 @@ def test_complex_tactical_position():
     print("[PASS] Complex position: all moves accounted for")
 
 
+# ============================================================================
+# Session 3 Bug Fix Tests
+# ============================================================================
+
+def test_escape_sort_priority():
+    """Bug #1: Escapes should appear BEFORE pawn_defends in defensive category."""
+    # White knight on e5 attacked by black queen on c7, no defender
+    board = chess.Board("r1b1kbnr/ppqppppp/2n5/4N3/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1")
+
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    # Find subcategories in order
+    def_subcats = [m.subcategory for m in result.defensive]
+    escapes = [i for i, s in enumerate(def_subcats) if s == 'escape']
+    defends = [i for i, s in enumerate(def_subcats) if s in ('pawn_defends', 'piece_defends')]
+
+    assert len(escapes) > 0, f"Expected escape moves, got subcats: {def_subcats}"
+
+    if defends:
+        # All escapes should come before all defends
+        assert max(escapes) < min(defends), \
+            f"Escapes (indices {escapes}) should all come before defends (indices {defends})"
+
+    print("[PASS] Escape sort priority: escapes before defenses")
+
+
+def test_escape_detection_all_moves():
+    """Bug #1: ALL moves of an attacked piece should be labeled escape, not just safe ones."""
+    # White knight on e5 attacked by black queen on c7
+    board = chess.Board("r1b1kbnr/ppqppppp/2n5/4N3/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1")
+
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    # Get all legal moves from e5
+    e5_legal = [m for m in board.legal_moves if m.from_square == chess.E5]
+    # Filter out captures (those are forcing, not escape)
+    e5_non_captures = [m for m in e5_legal if not board.is_capture(m)]
+
+    escape_ucis = {m.move_uci for m in result.defensive if m.subcategory == 'escape'}
+
+    for move in e5_non_captures:
+        assert move.uci() in escape_ucis, \
+            f"Knight move {move.uci()} from attacked e5 should be escape, not found in escapes: {escape_ucis}"
+
+    print("[PASS] Escape detection: all moves of attacked piece detected")
+
+
+def test_development_not_counterattack():
+    """Bug #2: Undeveloped bishop that attacks should be developing, not counterattack."""
+    # White Bc1 can go to g5, attacking Nf6. Black Bb4 attacks Nc3.
+    # d-pawn on d3 so Bc1's diagonal is open.
+    # Without the development gate, Bg5 would be defensive/counterattack.
+    board = chess.Board("r1bqk2r/pppp1ppp/2n2n2/4p3/1b2P3/2NP1N2/PPP2PPP/R1BQKB1R w KQkq - 0 5")
+
+    # Verify Bc1 can go to g5 and that Nc3 is attacked by Bb4
+    attacked = get_attacked_pieces(board, chess.WHITE)
+    attacked_squares = [ap.square for ap in attacked]
+    assert chess.C3 in attacked_squares, "Nc3 should be attacked by Bb4"
+
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    # Find Bg5
+    bg5_moves = [m for m in result.developing + result.defensive + result.quiet
+                 if m.move_uci == 'c1g5']
+    assert len(bg5_moves) > 0, "Bg5 should exist as a legal move"
+
+    bg5 = bg5_moves[0]
+    assert bg5.category == 'developing', \
+        f"Bg5 (undeveloped bishop) should be developing, got {bg5.category}/{bg5.subcategory}"
+    assert bg5.subcategory == 'minor_development', \
+        f"Bg5 should be minor_development, got {bg5.subcategory}"
+
+    print("[PASS] Development not counterattack: Bg5 correctly categorized")
+
+
+def test_central_outpost_key_square():
+    """Bug #3: Nd5 from c3 (both in center box) should be developing/key_square, not quiet."""
+    # Position: White Nc3 can go to d5
+    # Need a position where Nc3-d5 is legal and no capture/check
+    board = chess.Board("r1bqkb1r/pppppppp/5n2/8/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 3")
+
+    # Verify Nc3d5 is legal
+    nd5 = chess.Move.from_uci("c3d5")
+    assert nd5 in board.legal_moves, "Nc3-d5 should be legal"
+
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    nd5_entries = [m for m in result.forcing + result.defensive + result.developing + result.quiet
+                   if m.move_uci == 'c3d5']
+    assert len(nd5_entries) == 1, f"Expected exactly one entry for c3d5, got {len(nd5_entries)}"
+
+    nd5_entry = nd5_entries[0]
+    assert nd5_entry.category == 'developing', \
+        f"Nd5 should be developing, got {nd5_entry.category}/{nd5_entry.subcategory}"
+    assert nd5_entry.subcategory == 'key_square', \
+        f"Nd5 to key central square should be key_square, got {nd5_entry.subcategory}"
+
+    print("[PASS] Central outpost: Nd5 is developing/key_square")
+
+
+def test_center_support_pawns():
+    """Bug #4: c2c3, c2c4, f2f3, f2f4 should be developing/pawn_support_center."""
+    board = chess.Board()
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    dev_by_uci = {m.move_uci: m for m in result.developing}
+
+    for uci in ['c2c3', 'c2c4', 'f2f3', 'f2f4']:
+        assert uci in dev_by_uci, \
+            f"{uci} should be in developing, not found. Dev UCIs: {list(dev_by_uci.keys())}"
+        entry = dev_by_uci[uci]
+        assert entry.subcategory == 'pawn_support_center', \
+            f"{uci} should be pawn_support_center, got {entry.subcategory}"
+
+    print("[PASS] Center support pawns: c/f file pawns correctly categorized")
+
+
+def test_queen_escape_before_knight():
+    """Bug #5: Within escapes, queen (9.0) should sort before knight (3.2)."""
+    # Both white queen and knight attacked
+    # White Qd4 attacked by e5 pawn, White Nf3 attacked by Bg4 pin or similar
+    # Simpler: White Qd1 and Nc3 both attacked
+    board = chess.Board("r1b1kbnr/ppppqppp/2n5/4p3/3P4/2N1B3/PPP1PPPP/R2QKBNR w KQkq - 0 4")
+
+    attacked = get_attacked_pieces(board, chess.WHITE)
+    attacked_squares = [ap.square for ap in attacked]
+
+    # We need at least 2 attacked pieces for this test to be meaningful
+    # Let's use a position where both queen and knight are attacked
+    # Qd1 is attacked if something attacks d1... let's try another FEN
+    # Position: White Nc3 attacked by Bb4, White Qd4 attacked by e5 pawn
+    board = chess.Board("r1bqkb1r/pppp1ppp/2n2n2/4p3/1b1QP3/2N2N2/PPPP1PPP/R1B1KB1R w KQkq - 5 4")
+
+    attacked = get_attacked_pieces(board, chess.WHITE)
+    attacked_squares = [ap.square for ap in attacked]
+
+    result = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+
+    escapes = [m for m in result.defensive if m.subcategory == 'escape']
+
+    if len(escapes) >= 2:
+        # Check that escapes are sorted by piece_value descending
+        for i in range(len(escapes) - 1):
+            assert escapes[i].piece_value >= escapes[i+1].piece_value, \
+                f"Escape {escapes[i].move_san} (val={escapes[i].piece_value}) should sort before " \
+                f"{escapes[i+1].move_san} (val={escapes[i+1].piece_value})"
+        print(f"  Escape order: {[(m.move_san, m.piece_value) for m in escapes[:5]]}")
+    else:
+        # Fallback: just verify escapes have piece_value set
+        for esc in escapes:
+            assert esc.piece_value > 0, f"Escape {esc.move_san} should have piece_value > 0"
+
+    print("[PASS] Queen escape before knight: piece_value sorting works")
+
+
+def test_defensive_subcategory_limits():
+    """Bug #6: Subcategory limits ensure variety (escapes don't crowd out defenses)."""
+    # Position with many escape moves and some defense moves
+    # White Qd4 attacked (many queen escape squares) + Nc3 attacked (some knight escapes)
+    # + some pawn defenses available
+    board = chess.Board("r1bqkb1r/pppp1ppp/2n2n2/4p3/1b1QP3/2N2N2/PPPP1PPP/R1B1KB1R w KQkq - 5 4")
+
+    result_unlimited = categorize_all_moves(board, max_per_category=0, include_quiet=True)
+    result_limited = categorize_all_moves(board, max_per_category=3, include_quiet=True)
+
+    # Count subcategories in limited result
+    sub_counts = {}
+    for entry in result_limited.defensive:
+        sub_counts[entry.subcategory] = sub_counts.get(entry.subcategory, 0) + 1
+
+    # Escapes should be capped at 5
+    if 'escape' in sub_counts:
+        assert sub_counts['escape'] <= 5, \
+            f"Escapes should be limited to 5, got {sub_counts['escape']}"
+
+    # Pawn defends capped at 3
+    if 'pawn_defends' in sub_counts:
+        assert sub_counts['pawn_defends'] <= 3, \
+            f"Pawn defends should be limited to 3, got {sub_counts['pawn_defends']}"
+
+    # Counterattacks capped at 2
+    if 'counterattack' in sub_counts:
+        assert sub_counts['counterattack'] <= 2, \
+            f"Counterattacks should be limited to 2, got {sub_counts['counterattack']}"
+
+    # Verify variety: if unlimited has multiple subcategories, limited should too
+    unlim_subcats = {m.subcategory for m in result_unlimited.defensive}
+    lim_subcats = {m.subcategory for m in result_limited.defensive}
+    if len(unlim_subcats) > 1:
+        assert len(lim_subcats) > 1, \
+            f"Limited should preserve variety. Unlimited subcats: {unlim_subcats}, limited: {lim_subcats}"
+
+    print(f"  Limited defensive subcats: {sub_counts}")
+    print("[PASS] Defensive subcategory limits: variety preserved")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("CANDIDATE SUGGESTER TEST SUITE")
@@ -338,6 +534,14 @@ if __name__ == "__main__":
         test_castling_categorization,
         test_position_summary,
         test_complex_tactical_position,
+        # Session 3 bug fix tests
+        test_escape_sort_priority,
+        test_escape_detection_all_moves,
+        test_development_not_counterattack,
+        test_central_outpost_key_square,
+        test_center_support_pawns,
+        test_queen_escape_before_knight,
+        test_defensive_subcategory_limits,
     ]
 
     passed = 0

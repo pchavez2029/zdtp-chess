@@ -52,6 +52,7 @@ class MoveEntry:
     see_safe: bool         # Whether SEE considers move safe
     see_warning: Optional[str]  # Warning text if unsafe
     target_info: str       # Human-readable detail (e.g. "captures queen on d5")
+    piece_value: float = 0.0  # Value of moved piece (for secondary sorting)
 
 
 @dataclass
@@ -177,16 +178,6 @@ def defends_piece(
         if move.to_square in defenders:
             return sq
 
-    # Also check if the move simply moved the attacked piece away
-    if move.from_square in attacked_squares:
-        # Piece moved off the attacked square - check if it's safe now
-        piece_on_dest = board_copy.piece_at(move.to_square)
-        if piece_on_dest:
-            opponent = not color
-            dest_attackers = list(board_copy.attackers(opponent, move.to_square))
-            if not dest_attackers:
-                return move.from_square  # Escaped to safe square
-
     return None
 
 
@@ -247,6 +238,67 @@ def build_position_summary(board: chess.Board) -> PositionSummary:
 # Move Categorization
 # ============================================================================
 
+# The four key central squares (d4, e4, d5, e5) — used for outpost detection
+KEY_CENTRAL_SQUARES = {chess.D4, chess.E4, chess.D5, chess.E5}
+
+
+def _is_developing_move(board: chess.Board, move: chess.Move) -> bool:
+    """
+    Check if a move qualifies as developing (without full MoveEntry construction).
+
+    Used to gate counterattack detection — developing moves should not be
+    reclassified as counterattacks even when they happen to attack a piece.
+
+    WARNING: This mirrors the developing checks in categorize_move(). If those
+    checks change, this function must be updated to match.
+    """
+    piece = board.piece_at(move.from_square)
+    piece_type = piece.piece_type if piece else None
+    our_color = board.turn
+
+    # Castling
+    if board.is_castling(move):
+        return True
+
+    # Pawn center advance (d/e file)
+    if piece_type == chess.PAWN:
+        to_file = chess.square_file(move.to_square)
+        to_rank = chess.square_rank(move.to_square)
+        if to_file in (3, 4):  # d and e files
+            if (our_color == chess.WHITE and to_rank in (2, 3)) or \
+               (our_color == chess.BLACK and to_rank in (4, 5)):
+                return True
+        # Pawn support center (c/f file)
+        if to_file in (2, 5):  # c and f files
+            if (our_color == chess.WHITE and to_rank in (2, 3)) or \
+               (our_color == chess.BLACK and to_rank in (4, 5)):
+                return True
+
+    # Minor piece development from back rank
+    if piece_type in (chess.KNIGHT, chess.BISHOP):
+        from_rank = chess.square_rank(move.from_square)
+        back_rank = 0 if our_color == chess.WHITE else 7
+        if from_rank == back_rank:
+            return True
+
+    # Key central square
+    if piece_type in (chess.KNIGHT, chess.BISHOP, chess.QUEEN):
+        if move.to_square in KEY_CENTRAL_SQUARES:
+            return True
+
+    # Centralization (from outside center box to inside)
+    if piece_type in (chess.KNIGHT, chess.BISHOP, chess.QUEEN):
+        to_file = chess.square_file(move.to_square)
+        to_rank = chess.square_rank(move.to_square)
+        if 2 <= to_file <= 5 and 2 <= to_rank <= 5:
+            from_file = chess.square_file(move.from_square)
+            from_rank = chess.square_rank(move.from_square)
+            if not (2 <= from_file <= 5 and 2 <= from_rank <= 5):
+                return True
+
+    return False
+
+
 def categorize_move(
     board: chess.Board,
     move: chess.Move,
@@ -268,6 +320,7 @@ def categorize_move(
 
     piece = board.piece_at(move.from_square)
     piece_type = piece.piece_type if piece else None
+    piece_val = PIECE_VALUES.get(piece_type, 0.0) if piece_type else 0.0
     our_color = board.turn
 
     # --- FORCING ---
@@ -276,7 +329,7 @@ def categorize_move(
             move_uci=move_uci, move_san=move_san,
             category='forcing', subcategory='check',
             see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-            target_info=f"gives check"
+            target_info=f"gives check", piece_value=piece_val
         )
 
     if move.promotion is not None:
@@ -285,7 +338,7 @@ def categorize_move(
             move_uci=move_uci, move_san=move_san,
             category='forcing', subcategory='promotion',
             see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-            target_info=f"promotes to {promo_piece}"
+            target_info=f"promotes to {promo_piece}", piece_value=piece_val
         )
 
     if board.is_capture(move):
@@ -303,7 +356,8 @@ def categorize_move(
             move_uci=move_uci, move_san=move_san,
             category='forcing', subcategory=sub,
             see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-            target_info=f"captures {cap_name} on {chess.square_name(move.to_square)}"
+            target_info=f"captures {cap_name} on {chess.square_name(move.to_square)}",
+            piece_value=piece_val
         )
 
     if threatens_promotion(board, move):
@@ -311,12 +365,27 @@ def categorize_move(
             move_uci=move_uci, move_san=move_san,
             category='forcing', subcategory='threatens_promotion',
             see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-            target_info=f"pawn to 7th rank (threatens promotion)"
+            target_info=f"pawn to 7th rank (threatens promotion)",
+            piece_value=piece_val
         )
 
     # --- DEFENSIVE (only if we have attacked pieces) ---
     attacked_squares = [ap.square for ap in attacked_pieces]
     if attacked_squares:
+        # 1. ESCAPE — any move of an attacked piece
+        if move.from_square in attacked_squares:
+            escaped_piece = board.piece_at(move.from_square)
+            ep_name = chess.piece_name(escaped_piece.piece_type) if escaped_piece else "piece"
+            ep_sq = chess.square_name(move.from_square)
+            return MoveEntry(
+                move_uci=move_uci, move_san=move_san,
+                category='defensive', subcategory='escape',
+                see_value=see_value, see_safe=see_safe, see_warning=see_warning,
+                target_info=f"moves {ep_name} from attacked {ep_sq}",
+                piece_value=piece_val
+            )
+
+        # 2. DEFEND — piece moves to guard an attacked square
         defended_sq = defends_piece(board, move, attacked_squares)
         if defended_sq is not None:
             defended_piece = board.piece_at(defended_sq)
@@ -327,10 +396,7 @@ def categorize_move(
                 dp_name = "piece"
                 dp_sq = chess.square_name(defended_sq)
 
-            if move.from_square == defended_sq:
-                sub = 'escape'
-                info = f"moves {dp_name} from attacked {dp_sq}"
-            elif piece_type == chess.PAWN:
+            if piece_type == chess.PAWN:
                 sub = 'pawn_defends'
                 info = f"pawn defends {dp_name} on {dp_sq}"
             else:
@@ -342,18 +408,19 @@ def categorize_move(
                 move_uci=move_uci, move_san=move_san,
                 category='defensive', subcategory=sub,
                 see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                target_info=info
+                target_info=info, piece_value=piece_val
             )
 
-        # Counterattack: move attacks a higher-value enemy piece
-        attack_info = newly_attacks_piece(board, move)
-        if attack_info:
-            return MoveEntry(
-                move_uci=move_uci, move_san=move_san,
-                category='defensive', subcategory='counterattack',
-                see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                target_info=attack_info
-            )
+        # 3. COUNTERATTACK — but not if the move is a developing move
+        if not _is_developing_move(board, move):
+            attack_info = newly_attacks_piece(board, move)
+            if attack_info:
+                return MoveEntry(
+                    move_uci=move_uci, move_san=move_san,
+                    category='defensive', subcategory='counterattack',
+                    see_value=see_value, see_safe=see_safe, see_warning=see_warning,
+                    target_info=attack_info, piece_value=piece_val
+                )
 
     # --- DEVELOPING ---
     if board.is_castling(move):
@@ -362,7 +429,7 @@ def categorize_move(
             move_uci=move_uci, move_san=move_san,
             category='developing', subcategory='castling',
             see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-            target_info=f"{side} castling"
+            target_info=f"{side} castling", piece_value=piece_val
         )
 
     # Pawn center advance (d/e file pawn moving to rank 3-4 for white, 5-6 for black)
@@ -376,7 +443,22 @@ def categorize_move(
                     move_uci=move_uci, move_san=move_san,
                     category='developing', subcategory='pawn_center',
                     see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                    target_info=f"center pawn advance"
+                    target_info=f"center pawn advance", piece_value=piece_val
+                )
+
+    # Pawn support center (c/f file pawn moving to rank 3-4 for white, 5-6 for black)
+    if piece_type == chess.PAWN:
+        to_file = chess.square_file(move.to_square)
+        to_rank = chess.square_rank(move.to_square)
+        if to_file in (2, 5):  # c and f files
+            if (our_color == chess.WHITE and to_rank in (2, 3)) or \
+               (our_color == chess.BLACK and to_rank in (4, 5)):
+                return MoveEntry(
+                    move_uci=move_uci, move_san=move_san,
+                    category='developing', subcategory='pawn_support_center',
+                    see_value=see_value, see_safe=see_safe, see_warning=see_warning,
+                    target_info=f"center support pawn advance",
+                    piece_value=piece_val
                 )
 
     # Minor piece development (N/B moving from back rank)
@@ -389,7 +471,19 @@ def categorize_move(
                 move_uci=move_uci, move_san=move_san,
                 category='developing', subcategory='minor_development',
                 see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                target_info=f"{piece_name} development"
+                target_info=f"{piece_name} development", piece_value=piece_val
+            )
+
+    # Key central square (d4/e4/d5/e5) — fires before general centralization
+    if piece_type in (chess.KNIGHT, chess.BISHOP, chess.QUEEN):
+        if move.to_square in KEY_CENTRAL_SQUARES:
+            piece_name = chess.piece_name(piece_type)
+            return MoveEntry(
+                move_uci=move_uci, move_san=move_san,
+                category='developing', subcategory='key_square',
+                see_value=see_value, see_safe=see_safe, see_warning=see_warning,
+                target_info=f"{piece_name} to key central square",
+                piece_value=piece_val
             )
 
     # Rook to open/semi-open file
@@ -408,7 +502,7 @@ def categorize_move(
                 move_uci=move_uci, move_san=move_san,
                 category='developing', subcategory='rook_open_file',
                 see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                target_info=f"rook to open file"
+                target_info=f"rook to open file", piece_value=piece_val
             )
         elif (our_color == chess.WHITE and not white_pawns_on_file) or \
              (our_color == chess.BLACK and not black_pawns_on_file):
@@ -416,10 +510,10 @@ def categorize_move(
                 move_uci=move_uci, move_san=move_san,
                 category='developing', subcategory='rook_semi_open',
                 see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                target_info=f"rook to semi-open file"
+                target_info=f"rook to semi-open file", piece_value=piece_val
             )
 
-    # Centralization (piece moving toward center)
+    # Centralization (piece moving toward center from outside center box)
     if piece_type in (chess.KNIGHT, chess.BISHOP, chess.QUEEN):
         to_file = chess.square_file(move.to_square)
         to_rank = chess.square_rank(move.to_square)
@@ -432,7 +526,8 @@ def categorize_move(
                     move_uci=move_uci, move_san=move_san,
                     category='developing', subcategory='centralization',
                     see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-                    target_info=f"{piece_name} centralization"
+                    target_info=f"{piece_name} centralization",
+                    piece_value=piece_val
                 )
 
     # --- QUIET ---
@@ -446,7 +541,7 @@ def categorize_move(
         move_uci=move_uci, move_san=move_san,
         category='quiet', subcategory='quiet',
         see_value=see_value, see_safe=see_safe, see_warning=see_warning,
-        target_info=info
+        target_info=info, piece_value=piece_val
     )
 
 
@@ -505,32 +600,54 @@ def categorize_all_moves(
         -e.see_value
     ))
 
-    # Sort defensive by subcategory priority
+    # Sort defensive: escapes first, then defenses, then counterattacks
+    # Secondary sort by piece value descending (queen escapes before knight)
     _def_priority = {
-        'pawn_defends': 0,
-        'piece_defends': 1,
-        'counterattack': 2,
-        'escape': 3,
+        'escape': 0,
+        'pawn_defends': 1,
+        'piece_defends': 2,
+        'counterattack': 3,
     }
-    defensive.sort(key=lambda e: _def_priority.get(e.subcategory, 99))
+    defensive.sort(key=lambda e: (
+        _def_priority.get(e.subcategory, 99),
+        -e.piece_value,
+    ))
 
     # Sort developing by subcategory priority
     _dev_priority = {
         'castling': 0,
         'pawn_center': 1,
-        'minor_development': 2,
-        'rook_open_file': 3,
-        'rook_semi_open': 4,
-        'centralization': 5,
+        'pawn_support_center': 2,
+        'key_square': 3,
+        'minor_development': 4,
+        'rook_open_file': 5,
+        'rook_semi_open': 6,
+        'centralization': 7,
     }
     developing.sort(key=lambda e: _dev_priority.get(e.subcategory, 99))
 
     # Truncate to max_per_category
     if max_per_category > 0:
         forcing = forcing[:max_per_category]
-        defensive = defensive[:max_per_category]
         developing = developing[:max_per_category]
         quiet = quiet[:max_per_category]
+
+        # Defensive: per-subcategory limits for guaranteed variety
+        _sub_limits = {
+            'escape': 5,
+            'pawn_defends': 3,
+            'piece_defends': 3,
+            'counterattack': 2,
+        }
+        limited = []
+        sub_counts: Dict[str, int] = {}
+        for entry in defensive:  # already sorted
+            count = sub_counts.get(entry.subcategory, 0)
+            limit = _sub_limits.get(entry.subcategory, max_per_category)
+            if count < limit:
+                limited.append(entry)
+                sub_counts[entry.subcategory] = count + 1
+        defensive = limited
 
     result = CandidateSuggestion(
         position_summary=summary,
@@ -560,6 +677,8 @@ def format_suggestion_response(suggestion: CandidateSuggestion) -> dict:
             'info': entry.target_info,
             'see_value': entry.see_value,
         }
+        if entry.piece_value > 0:
+            result['piece_value'] = entry.piece_value
         if not entry.see_safe:
             result['see_warning'] = entry.see_warning
         return result
